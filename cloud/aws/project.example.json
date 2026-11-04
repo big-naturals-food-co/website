@@ -1,0 +1,9 @@
+{
+  "account": "111111111111",
+  "region": "us-east-1",
+  "domainName": "example.com",
+  "redirectDomainNames": ["www.example.com"],
+  "zoneName": "example.com",
+  "hostedZoneId": "ZEXAMPLE123",
+  "stackName": "BigNaturalsFoodCoSite"
+}
