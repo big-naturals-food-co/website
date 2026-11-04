@@ -43,7 +43,8 @@ DNS creation and the first upload, the empty bucket cannot serve the page.
 The role's one-hour session covers a deployment job with a 60-minute timeout.
 Certificate or CloudFront provisioning can take several minutes. Check the
 Actions log and CloudFormation events if the initial rollout stalls or fails.
-Do not widen IAM policies without identifying the missing operation/resource.
+The shared deployment policy permits full management of the configured assets;
+see [the service scopes](ACCESS.md#permissions-and-their-limits).
 
 ## Failure and rollback
 
@@ -77,11 +78,26 @@ and compares against the local generated build, so use the matching Actions
 artifact for verification of a deployed revision. A newly generated local build
 may have different Nuxt build IDs even at the same source commit.
 
-Local deployment is allowed when useful but is not a prerequisite to GitHub
-deployment. For an explicitly requested manual rollout, use the operator's
-credentials and the same CDK/publishing commands as the workflow. Keep the
-generated `cdk.out/deploy-outputs.json` local; it supplies the validated bucket,
-distribution ID, and canonical URL to `npm run publish:site -- --outputs ...`.
+For a local production deployment, generate `web/` first, then run the following
+from `cloud/aws/` with the project operator's AWS credentials:
+
+```sh
+npm run synth
+npm run cdk -- --app cdk.out deploy BigNaturalsFoodCoSite --method change-set --require-approval never --outputs-file cdk.out/deploy-outputs.json
+npm run publish:site -- --outputs cdk.out/deploy-outputs.json
+npm run verify:site
+```
+
+The operator uses the same managed deployment policy as GitHub. Keep
+`cdk.out/deploy-outputs.json` local; it supplies the validated bucket,
+distribution ID, and canonical URL to publication. For troubleshooting an
+initial creation, `--no-rollback` preserves successfully created resources
+if a later resource fails, so the corrected stack can be retried.
+
+A `ROLLBACK_COMPLETE` stack must be removed before recreation. Disable its
+termination protection before deleting the failed stack record, and inspect
+retained resources first: a retained S3 bucket may need importing instead of
+recreation. Never delete a populated bucket merely to retry deployment.
 
 When adding public files, update both the edge routing allowlist and publication
 validation/content types. HTML, payloads, favicon, and Nuxt build metadata use

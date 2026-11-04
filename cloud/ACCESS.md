@@ -4,17 +4,14 @@ The IAM access stack can be provisioned directly through the AWS CLI. Manual
 Console template upload is not required. Local deployments are permitted when
 useful; a local website deployment is not a prerequisite to GitHub deployment.
 
-**Status: applied through the CLI on November 4, 2026.**
-`BigNaturalsFoodCoAccess` is `CREATE_COMPLETE`, with termination protection
-enabled. The operator user and both roles exist, and their trust policies were
-verified. No website resources or DNS records were changed. The instructions
-below are for reference or future access-stack updates; no manual upload or
-operator sign-in is needed before adding the GitHub workflow.
+**Status: IAM policies updated through the CLI on November 4, 2026.**
+The operator and GitHub role share broad asset-management permissions. The
+access stack retains termination protection and remains administrator-managed.
 
 ## One-time CLI bootstrap
 
 Use an administrator session in account `066540957026`. The `default` profile
-currently uses root and is reserved for this initial IAM setup. From
+currently uses root and is reserved for IAM setup and policy updates. From
 `cloud/aws/`, these commands synthesize and apply only `BigNaturalsFoodCoAccess`:
 
 ```sh
@@ -85,37 +82,28 @@ an `environment:` setting unless the trust is deliberately revised.
 
 ## Permissions and their limits
 
-The operator and GitHub role share a deployment policy. They can create/update
-`BigNaturalsFoodCoSite` only while passing the dedicated CloudFormation role,
-inspect and execute that stack's changes, publish objects to the specific site
-bucket, inspect its DNS zone, and invalidate CloudFront distributions tagged
-`Project=BigNaturalsFoodCo`. They cannot delete site objects/versions, delete
-the site stack, assume shared bootstrap roles, change IAM permissions, or
-update this access stack. Resource imports are explicitly denied.
+The operator and GitHub role share the same deployment policy. It grants full
+CloudFormation management of `BigNaturalsFoodCoSite`, including deletion and
+recovery of a failed initial stack. They can pass only the dedicated project
+execution role to CloudFormation; neither identity can edit IAM or deploy the
+access stack.
 
-The CloudFormation service role manages the exact site bucket and hosted zone.
-DNS changes allow only apex/www A/AAAA records and underscore-prefixed CNAMEs
-for certificate validation; MX/TXT email records are excluded. Certificate
-requests are restricted to the site's domain names and DNS validation.
-The request may omit the `Project` tag, allowing certificate creation when
-CloudFormation applies tags separately; if supplied, it must be
-`BigNaturalsFoodCo`. Domain names must be present and requests must target
-`us-east-1`. Certificate description and tag reads permit untagged resources
-in this account/region because CloudFormation reads immediately during creation,
-before separately applied tags are visible to IAM. Reads reject a different
-`Project` tag. Certificate modification and deletion still require the project
-tag. Distribution/function operations use project-tag restrictions.
-Project ownership tags cannot be removed or changed.
+Both deployment identities and the CloudFormation execution role have:
 
-**CloudFront scope limitation:** cache policies, response-header policies, and
-origin access controls do not support resource-tag conditions. The service
-role therefore has their specific create operations and account-scoped resource
-type permissions. These are broader than the eventual individual resource
-IDs. Only CloudFormation can assume this role; neither the operator nor GitHub
-can call those APIs directly. Their CloudFormation access is restricted to the
-site stack, with existing-resource imports denied. This is a shared-account
-deployment boundary, not the isolation of a separate AWS account. Reassess
-these permissions if new resource types are introduced.
+| Service | Permissions and scope |
+| --- | --- |
+| S3 | `s3:*` on the named site bucket and all objects/versions within it |
+| Route 53 | `route53:*` on the site's hosted zone and change records |
+| CloudFront | `cloudfront:*` on this account's resources, plus creation/listing APIs |
+| ACM | `acm:*` on this account's certificates in `us-east-1`, plus certificate requests/listing in that region |
+
+There are no request-tag, existing-tag, record-type, or per-operation restrictions
+on those assets. Tags remain useful metadata, not deployment authorization gates.
+CloudFront and ACM management extends to other resources in the same account
+(and ACM region); Route 53 access covers all records in the site's zone. This
+is the deliberately broader policy requested for deployment reliability.
+The stack still declares only the website's aliases and certificate validation
+records, and publication still retains old files and versions.
 
 The user additionally gets AWS's `SignInLocalDevelopmentAccess` managed policy
 for `aws login`, plus read/change-password access for their own IAM identity.
@@ -129,24 +117,12 @@ From `cloud/aws/`, `npm run typecheck`, `npm test`, `npm run synth`, and
 `npm run synth:access` validate and regenerate the source-defined templates.
 Both templates fit CloudFormation's inline limit. The tests cover OIDC trust,
 policy scope, IAM size limits, and the absence of shared bootstrap roles/assets.
-AWS Access Analyzer and CloudFormation template validation passed; 23 read-only
-IAM simulations verified allowed site operations and denied cross-project,
-IAM-privilege, import, and email-DNS operations. GitHub OIDC assumption worked
-in the initial deployment attempts. A successful website deployment and optional
-operator sign-in still need their own live checks.
-
-After updating IAM, run `AWS_PROFILE=default npm run verify:certificate-access`
-from `cloud/aws/` with an administrator session. This read-only check uses AWS
-IAM simulation against the deployed execution role. It covers certificate
-creation without tags, reads before/after tagging, initial tagging, project-only
-updates/deletion, and rejection of other accounts, regions, and projects.
-It does not substitute for an actual CloudFormation deployment.
-
-On November 4, run `41908900280` successfully requested and tagged the
-certificate, but its immediate `DescribeCertificate` call was denied by the
-resource-tag condition. CloudTrail confirms those operations and successful
-certificate deletion during rollback. The inspection permission above addresses
-that creation-time read; keeping all ACM actions behind existing tags does not.
+On November 4, 2026, the project operator successfully recovered the failed
+initial stack, deployed the full site, published 11 files, completed CloudFront
+invalidation, and passed public HTTPS/build/redirect verification. This exercised
+the same managed deployment policy used by GitHub. An administrator created a
+one-use operator access key for the local run; it stayed in process memory and
+was deleted after verification. No persistent key or profile was installed.
 
 The IAM stack is ready and the [GitHub workflow](DEPLOYMENT.md) is implemented.
 Its role ARN is:

@@ -66,58 +66,27 @@ test('deployment policy cannot alter IAM, use shared bootstrap roles, or manage 
   for (const statement of statements.filter(s => [s.Action].flat().some((a: string) => a.startsWith('cloudformation:')))) {
     assert.equal(statement.Resource, `arn:aws:cloudformation:${project.region}:${project.account}:stack/${project.stackName}/*`)
   }
-  assert.ok(!text.includes('cloudformation:DeleteStack'))
-  assert.ok(!text.includes('s3:DeleteObject'))
-  assert.equal(statements.find(s => s.Sid === 'PublishSiteWithoutDeletingVersions')!.Resource, `${siteBucketArn(project)}/*`)
-  assert.equal(statements.find(s => s.Sid === 'NoImportOfExistingResources')!.Effect, 'Deny')
+  assert.equal(statements.find(s => s.Sid === 'ManageSiteStack')!.Action, 'cloudformation:*')
   assert.ok(JSON.stringify({ Version: '2012-10-17', Statement: statements }).length < 6144)
 })
 
-test('execution scope excludes IAM and email DNS, retains ownership tags, and fits IAM size limits', () => {
+test('asset policies grant full service management with bucket, zone, account and region boundaries', () => {
   const statements = executionStatements(project).map(s => s.toStatementJson())
   const text = JSON.stringify(statements)
   assert.ok(!text.includes('iam:'))
-  assert.ok(!text.includes('sts:AssumeRole'))
-  const dns = statements.filter(s => [s.Action].flat().includes('route53:ChangeResourceRecordSets'))
-  assert.equal(dns.length, 2)
-  for (const statement of dns) {
-    assert.equal(statement.Resource, `arn:aws:route53:::hostedzone/${project.hostedZoneId}`)
-    const types = statement.Condition['ForAllValues:StringEquals']['route53:ChangeResourceRecordSetsRecordTypes']
-    assert.ok(types.every((type: string) => ['A', 'AAAA', 'CNAME'].includes(type)))
-  }
-  assert.equal(statements.find(s => s.Sid === 'KeepProjectOwnershipTags')!.Effect, 'Deny')
-  assert.equal(statements.find(s => s.Sid === 'DoNotChangeProjectOwnershipTags')!.Effect, 'Deny')
+  assert.ok(!text.includes('sts:'))
+  assert.ok(!text.includes('aws:ResourceTag'))
+  assert.ok(!text.includes('aws:RequestTag'))
+  const byId = (sid: string) => statements.find(s => s.Sid === sid)!
+  assert.equal(byId('ManageSiteBucket').Action, 's3:*')
+  assert.deepEqual(byId('ManageSiteBucket').Resource, [siteBucketArn(project), `${siteBucketArn(project)}/*`])
+  assert.equal(byId('ManageSiteDns').Action, 'route53:*')
+  assert.deepEqual(byId('ManageSiteDns').Resource, [`arn:aws:route53:::hostedzone/${project.hostedZoneId}`, 'arn:aws:route53:::change/*'])
+  assert.equal(byId('ManageCdn').Action, 'cloudfront:*')
+  assert.equal(byId('ManageCdn').Resource, `arn:aws:cloudfront::${project.account}:*`)
+  assert.equal(byId('ManageCertificates').Action, 'acm:*')
+  assert.equal(byId('ManageCertificates').Resource, `arn:aws:acm:${project.region}:${project.account}:certificate/*`)
   assert.ok(JSON.stringify({ Version: '2012-10-17', Statement: statements }).length < 10_240)
-})
-
-test('certificate creation permits deferred tagging without relaxing domain, DNS, or region restrictions', () => {
-  const statements = executionStatements(project).map(s => s.toStatementJson())
-  const request = statements.find(s => s.Sid === 'RequestOnlySiteCertificates')!
-  assert.deepEqual(request.Condition, {
-    StringEquals: { 'acm:ValidationMethod': 'DNS', 'aws:RequestedRegion': project.region },
-    StringEqualsIfExists: { 'aws:RequestTag/Project': accessNames.projectTag },
-    'ForAllValues:StringEquals': { 'acm:DomainNames': [project.domainName, ...project.redirectDomainNames] },
-    Null: { 'acm:DomainNames': 'false' },
-  })
-  const management = statements.find(s => s.Sid === 'ManageProjectCertificates')!
-  assert.equal(management.Condition.StringEquals['aws:ResourceTag/Project'], accessNames.projectTag)
-})
-
-test('pre-tag certificate inspection grants only scoped reads and leaves mutations tag-restricted', () => {
-  const statements = executionStatements(project).map(s => s.toStatementJson())
-  const inspect = statements.find(s => s.Sid === 'InspectCertificatesDuringCreation')!
-  assert.deepEqual(inspect.Action, ['acm:DescribeCertificate', 'acm:ListTagsForCertificate'])
-  assert.equal(inspect.Resource, `arn:aws:acm:${project.region}:${project.account}:certificate/*`)
-  assert.deepEqual(inspect.Condition, {
-    StringEqualsIfExists: { 'aws:ResourceTag/Project': accessNames.projectTag },
-  })
-  for (const action of ['acm:DeleteCertificate', 'acm:UpdateCertificateOptions', 'acm:RemoveTagsFromCertificate']) {
-    const grants = statements.filter(s => s.Effect === 'Allow' && [s.Action].flat().includes(action))
-    assert.equal(grants.length, 1)
-    assert.deepEqual(grants[0]!.Condition, {
-      StringEquals: { 'aws:ResourceTag/Project': accessNames.projectTag },
-    })
-  }
 })
 
 test('assemblies use caller credentials and only the project service role, without bootstrap assets', () => {
