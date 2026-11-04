@@ -128,7 +128,8 @@ IAM-privilege, import, and email-DNS operations. The first website deployment,
 GitHub OIDC assumption, and optional operator sign-in still need their own live
 checks.
 
-The IAM stack is ready. The next step is the GitHub workflow. Its role ARN is:
+The IAM stack is ready and the [GitHub workflow](DEPLOYMENT.md) is implemented.
+Its role ARN is:
 
 ```text
 arn:aws:iam::066540957026:role/big-naturals-food-co-github-deploy

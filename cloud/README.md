@@ -2,8 +2,9 @@
 
 The TypeScript CDK application in `aws/` defines one production static site.
 The infrastructure code is implemented and validated; it has **not been
-deployed**. Project-specific IAM access is deployed; GitHub publication is
-the next setup work. There is no beta environment or application backend.
+deployed**. Project-specific IAM access is deployed. The GitHub workflow is
+implemented; its first rollout is pending. See [deployment and rollback](DEPLOYMENT.md).
+There is no beta environment or application backend.
 
 ## Configuration
 
@@ -121,7 +122,7 @@ web files or introduce a Lambda-backed bucket-deployment custom resource.
 
 ## Verification
 
-Typechecking, twelve tests, and synthesis for the access stack plus production and example site settings
+Typechecking, eighteen tests, and synthesis for the access stack plus production and example site settings
 passed on November 4, 2026. Tests check private bucket permissions/retention,
 certificate validation and DNS aliases, HTTPS and edge-function wiring,
 canonical/unknown-path redirects, asset pass-through, query preservation, and

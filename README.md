@@ -18,10 +18,10 @@ Web setup, local preview, build commands, and verification notes are in
    through the [one-time CLI setup](cloud/ACCESS.md); GitHub can use its OIDC role
    independently of the human operator's login.
    See [`cloud/README.md`](cloud/README.md) for configuration and validation.
-3. **GitHub deployments:** on pushes to `main`, validate and generate the site,
+3. **GitHub deployments (implemented; first run pending):** on pushes to `main`, validate and generate the site,
    deploy CDK, upload assets, and invalidate CloudFront. Authenticate through
    OIDC restricted to this repository's `main` branch. Serialize deployments
-   and document verification and rollback.
+   and verify the published build. See [deployment and rollback](cloud/DEPLOYMENT.md).
 
 One production environment. No beta branch or release-triggered deployments.
 Local deployment is allowed when useful; it is not an extra required step before
