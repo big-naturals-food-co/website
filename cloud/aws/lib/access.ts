@@ -1,5 +1,6 @@
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
 import type { ProjectConfig } from './config.js'
+import { signupNames } from './signup-config.js'
 
 export const accessNames = {
   stack: 'BigNaturalsFoodCoAccess',
@@ -22,7 +23,7 @@ export function deploymentStatements(project: ProjectConfig): PolicyStatement[] 
   return [
     new PolicyStatement({
       sid: 'ManageSiteStack', actions: ['cloudformation:*'],
-      resources: [`arn:aws:cloudformation:${project.region}:${project.account}:stack/${project.stackName}/*`],
+      resources: [project.stackName, signupNames.stack].map(name => `arn:aws:cloudformation:${project.region}:${project.account}:stack/${name}/*`),
     }),
     new PolicyStatement({
       sid: 'PassOnlyProjectExecutionRoleToCloudFormation', actions: ['iam:PassRole'],
@@ -59,6 +60,48 @@ export function executionStatements(project: ProjectConfig): PolicyStatement[] {
     new PolicyStatement({
       sid: 'RequestAndListCertificates', actions: ['acm:RequestCertificate', 'acm:ListCertificates'], resources: ['*'],
       conditions: { StringEquals: { 'aws:RequestedRegion': project.region } },
+    }),
+    new PolicyStatement({
+      sid: 'ManageSignupFunction', actions: ['lambda:*'],
+      resources: [`arn:aws:lambda:${project.region}:${project.account}:function:${signupNames.function}`],
+    }),
+    new PolicyStatement({
+      sid: 'ManageSignupLogs', actions: ['logs:CreateLogGroup', 'logs:PutRetentionPolicy', 'logs:DeleteRetentionPolicy', 'logs:DeleteLogGroup', 'logs:TagResource', 'logs:UntagResource', 'logs:ListTagsForResource'],
+      resources: [`arn:aws:logs:${project.region}:${project.account}:log-group:${signupNames.logs}`, `arn:aws:logs:${project.region}:${project.account}:log-group:${signupNames.logs}:*`],
+    }),
+    new PolicyStatement({
+      sid: 'ListLogGroups', actions: ['logs:DescribeLogGroups'], resources: ['*'],
+      conditions: { StringEquals: { 'aws:RequestedRegion': project.region } },
+    }),
+    // API IDs do not exist before creation; management is scoped to this region.
+    new PolicyStatement({
+      sid: 'ManageHttpApis', actions: ['apigateway:GET', 'apigateway:POST', 'apigateway:PUT', 'apigateway:PATCH', 'apigateway:DELETE'],
+      resources: [`arn:aws:apigateway:${project.region}::/apis`, `arn:aws:apigateway:${project.region}::/apis/*`,
+        `arn:aws:apigateway:${project.region}::/domainnames`,
+        `arn:aws:apigateway:${project.region}::/domainnames/api.${project.domainName}`, `arn:aws:apigateway:${project.region}::/domainnames/api.${project.domainName}/*`,
+        `arn:aws:apigateway:${project.region}::/tags/*`],
+    }),
+    new PolicyStatement({
+      sid: 'PassOnlySignupRuntimeRoleToLambda', actions: ['iam:PassRole'],
+      resources: [`arn:aws:iam::${project.account}:role/${signupNames.role}`],
+      conditions: { StringEquals: { 'iam:PassedToService': 'lambda.amazonaws.com' } },
+    }),
+    new PolicyStatement({
+      sid: 'ManageSignupDomainCertificate', actions: ['apigateway:AddCertificateToDomain', 'apigateway:RemoveCertificateFromDomain'],
+      resources: [`arn:aws:apigateway:${project.region}::/domainnames/api.${project.domainName}`],
+    }),
+  ]
+}
+
+export function signupRuntimeStatements(project: ProjectConfig): PolicyStatement[] {
+  return [
+    new PolicyStatement({
+      actions: ['ssm:GetParameter'],
+      resources: [signupNames.brevoParameter, signupNames.turnstileParameter].map(name => `arn:aws:ssm:${project.region}:${project.account}:parameter${name}`),
+    }),
+    new PolicyStatement({
+      actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+      resources: [`arn:aws:logs:${project.region}:${project.account}:log-group:${signupNames.logs}:*`],
     }),
   ]
 }

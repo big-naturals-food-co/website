@@ -5,7 +5,7 @@ import {
   type FileAssetLocation, type DockerImageAssetSource, type DockerImageAssetLocation,
 } from 'aws-cdk-lib'
 
-/** These stacks contain inline resources only. Website files are uploaded by CI. */
+/** Inline templates and Lambda code only. Website files are uploaded by CI. */
 export class StaticSynthesizer extends StackSynthesizer {
   constructor(private readonly executionRoleArn?: string) { super() }
 

@@ -5,6 +5,12 @@ deploys production on pushes to `main`. There is no beta, release trigger,
 manual dispatch, or GitHub Environment. IAM trusts the exact immutable
 repository/main OIDC subject documented in [ACCESS.md](ACCESS.md).
 
+Signup deploys through this workflow when changes reach `main`. The one-time
+access update was applied and verified on November 4, 2026. GitHub can write
+the two signup parameters and deploy the backend, but cannot grant itself
+additional permissions. Future IAM changes remain administrator-managed;
+see [access setup](ACCESS.md).
+
 ## How a deployment runs
 
 1. Install locked dependencies with Node 24. Typecheck and test infrastructure
@@ -14,7 +20,7 @@ repository/main OIDC subject documented in [ACCESS.md](ACCESS.md).
    The deployment job checks out the same commit and downloads that exact site
    build. Pull requests run checks only and never obtain AWS credentials.
 3. Reject an outdated main run, obtain temporary credentials through OIDC, and
-   deploy only `BigNaturalsFoodCoSite` using its dedicated CloudFormation role.
+   deploy `BigNaturalsFoodCoSite` and `BigNaturalsFoodCoSignup` using the project CloudFormation role.
    The IAM access stack remains administrator-managed and is never deployed
    by this workflow.
 4. Upload immutable Nuxt assets first, followed by short-lived files, HTML, and
@@ -27,9 +33,12 @@ repository/main OIDC subject documented in [ACCESS.md](ACCESS.md).
 The workflow serializes runs for each ref without cancelling an active
 deployment. GitHub may replace a pending run with a newer push; the main-tip
 check prevents an old rerun from publishing over newer code. All third-party
-Actions are pinned to reviewed release commit SHAs. No AWS secrets or repository
-variables need to be entered: the non-secret account, region, and role ARN are
-already configured. The expected AWS account is checked during authentication
+Actions are pinned to reviewed release commit SHAs. No AWS access keys or repository
+variables need to be entered: the account, region and role ARN are derived
+from `aws/project.json`. The `BREVO_API_KEY` and `TURNSTILE_SECRET` repository Actions secrets are
+copied into encrypted AWS SSM parameters before signup deployment;
+see [the required first-time access update and setup](SIGNUP.md).
+The expected AWS account is checked during authentication
 and again before site upload; publication rejects root credentials.
 
 ## Normal use
@@ -83,7 +92,7 @@ from `cloud/aws/` with the project operator's AWS credentials:
 
 ```sh
 npm run synth
-npm run cdk -- --app cdk.out deploy BigNaturalsFoodCoSite --method change-set --require-approval never --outputs-file cdk.out/deploy-outputs.json
+npm run cdk -- --app cdk.out deploy BigNaturalsFoodCoSite BigNaturalsFoodCoSignup --method change-set --require-approval never --outputs-file cdk.out/deploy-outputs.json
 npm run publish:site -- --outputs cdk.out/deploy-outputs.json
 npm run verify:site
 ```

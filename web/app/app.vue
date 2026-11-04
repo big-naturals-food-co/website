@@ -28,7 +28,7 @@
         <p class="mt-3 text-sm leading-relaxed text-ink/75 sm:text-base">We’re just getting started. More soon.</p>
       </div>
 
-      <span class="mt-8 rounded-full border border-tomato px-6 py-2.5 text-xs font-bold tracking-[0.16em] sm:mt-10">COMING SOON</span>
+      <SignupForm />
     </main>
 
     <footer class="mx-5 flex flex-col items-center justify-between gap-2 border-t border-tomato/30 py-5 text-[0.65rem] font-medium tracking-[0.12em] sm:mx-10 sm:flex-row sm:py-6 sm:text-xs lg:mx-16">

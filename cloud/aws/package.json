@@ -5,7 +5,7 @@
   "scripts": {
     "cdk": "cdk",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "node --import tsx --test test/*.test.ts test/*.test.cjs && python3 -m unittest discover -s test -p 'test_*.py'",
     "synth": "cdk synth --quiet",
     "synth:example": "cdk synth --context projectConfig=project.example.json --output cdk.out/example --quiet",
     "synth:access": "cdk synth --app 'node --import tsx bin/access.ts' --output cdk.out/access --quiet",
