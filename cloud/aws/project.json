@@ -1,0 +1,9 @@
+{
+  "account": "066540957026",
+  "region": "us-east-1",
+  "domainName": "bignaturalsfoodco.com",
+  "redirectDomainNames": ["www.bignaturalsfoodco.com"],
+  "zoneName": "bignaturalsfoodco.com",
+  "hostedZoneId": "Z06575272C3P2P6HNST09",
+  "stackName": "BigNaturalsFoodCoSite"
+}
