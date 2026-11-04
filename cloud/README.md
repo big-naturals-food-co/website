@@ -1,9 +1,10 @@
 # Big Naturals Food Co. infrastructure
 
 The TypeScript CDK application in `aws/` defines one production static site.
-The infrastructure code is implemented and validated; it has **not been
-deployed**. Project-specific IAM access is deployed. The GitHub workflow is
-implemented; its first rollout is pending. See [deployment and rollback](DEPLOYMENT.md).
+The site is live at [bignaturalsfoodco.com](https://bignaturalsfoodco.com).
+The full production deployment was completed and verified locally on November 4,
+2026 using the operator with the same managed deployment policy as GitHub.
+See [deployment and rollback](DEPLOYMENT.md) for local and GitHub commands.
 There is no beta environment or application backend.
 
 ## Configuration
@@ -84,15 +85,14 @@ or HTML error fallback. Missing files within the reserved `/_nuxt/` asset
 namespace remain asset errors rather than receiving HTML in place of JS/CSS.
 Extend the asset allowlist in `lib/landing-request.ts` when adding public files.
 
-## Access and first deployment handoff
+## Access and deployment
 
 The separate `BigNaturalsFoodCoAccess` stack was deployed through the CLI on
-November 4, 2026. It is `CREATE_COMPLETE` with termination protection enabled.
-The root `default` profile was used for this one-time IAM bootstrap, which
-created the operator user, main-only GitHub role, and CloudFormation service
-role. The website and DNS were not deployed. See [CLI setup and authentication
-details](ACCESS.md); operator password/MFA setup is independent of GitHub and
-is not a workflow prerequisite.
+November 4, 2026, and retains termination protection. An administrator applies
+IAM changes; the operator and main-only GitHub role share the same deployment
+policy. The site uses its dedicated CloudFormation service role. See
+[CLI setup and authentication details](ACCESS.md); operator password/MFA setup
+is independent of GitHub and is not a workflow prerequisite.
 
 The site assembly now passes only the dedicated project service role to
 CloudFormation. It uses the caller's deployment credentials directly, with no
@@ -110,9 +110,9 @@ See [permissions and their limits](ACCESS.md#permissions-and-their-limits).
 
 The site stack creates DNS aliases, so its first deployment must be followed
 by publication of the generated site files in the same workflow. An empty
-bucket cannot serve the landing page. Step 3 should upload hashed assets first,
-publish HTML and mutable Nuxt build metadata with short cache lifetimes, retain
-old hashed assets for existing clients, and invalidate changed entrypoints.
+bucket cannot serve the landing page. Publication uploads hashed assets first,
+publishes HTML and mutable Nuxt build metadata with short cache lifetimes, retains
+old hashed assets for existing clients, and invalidates changed entrypoints.
 Keep mutable `/_nuxt/builds/latest.json` out of the immutable asset cache group.
 
 Stack outputs expose the site URL, bucket name, distribution ID/ARN/domain, and
@@ -122,16 +122,18 @@ web files or introduce a Lambda-backed bucket-deployment custom resource.
 
 ## Verification
 
-Typechecking, eighteen tests, and synthesis for the access stack plus production and example site settings
-passed on November 4, 2026. Tests check private bucket permissions/retention,
-certificate validation and DNS aliases, HTTPS and edge-function wiring,
-canonical/unknown-path redirects, asset pass-through, query preservation, and
-configuration validation. IAM stack creation and live role trust checks passed;
-website HTTPS and GitHub OIDC checks remain pending the workflow deployment.
-AWS Access Analyzer accepted both
-proposed deployment/execution policies; AWS validated the setup template, and
-23 read-only IAM simulation cases passed. These checks do not replace a real
-deployment or verification using the new identity.
+Typechecking, eighteen tests, and production/access synthesis passed on
+November 4, 2026. Tests cover private bucket access and retention, certificate
+validation and DNS aliases, HTTPS and edge routing, publication order, broad
+asset permissions, and the GitHub trust boundary. The Nuxt typecheck and static
+generation also passed. GitHub OIDC authentication succeeded in the initial
+workflow attempts. The local rollout then completed successfully using the
+operator's shared deployment policy: the site stack is `CREATE_COMPLETE`, all
+11 files were published, and the CloudFront invalidation completed. Public HTTPS
+verification matched the generated homepage and referenced assets byte for byte,
+and checked canonical/root redirects. Existing MX/TXT records were unchanged.
+The temporary operator access key used for this run was deleted afterward.
+GitHub has not been rerun since that successful local deployment.
 
 `npm audit` reports two moderate affected packages (`aws-cdk-lib` and its
 transitive `minimatch` dependency) for one glob-processing denial-of-service
