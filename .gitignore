@@ -1,0 +1,11 @@
+node_modules/
+.nuxt/
+.output/
+.data/
+dist/
+cdk.out/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
