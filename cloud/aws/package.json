@@ -9,6 +9,7 @@
     "synth": "cdk synth --quiet",
     "synth:example": "cdk synth --context projectConfig=project.example.json --output cdk.out/example --quiet",
     "synth:access": "cdk synth --app 'node --import tsx bin/access.ts' --output cdk.out/access --quiet",
+    "verify:certificate-access": "node --import tsx scripts/verify-certificate-access.ts",
     "publish:site": "node --import tsx scripts/publish-site.ts",
     "verify:site": "node --import tsx scripts/verify-site.ts"
   },

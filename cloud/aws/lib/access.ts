@@ -110,8 +110,16 @@ export function executionStatements(project: ProjectConfig): PolicyStatement[] {
       },
     }),
     new PolicyStatement({
+      sid: 'InspectCertificatesDuringCreation',
+      actions: ['acm:DescribeCertificate', 'acm:ListTagsForCertificate'],
+      resources: [certificate],
+      // CloudFormation reads the certificate before its separately applied tags
+      // are visible to IAM. Permit untagged reads, but not other projects' tags.
+      conditions: { StringEqualsIfExists: { 'aws:ResourceTag/Project': accessNames.projectTag } },
+    }),
+    new PolicyStatement({
       sid: 'ManageProjectCertificates',
-      actions: ['acm:DescribeCertificate', 'acm:DeleteCertificate', 'acm:ListTagsForCertificate', 'acm:UpdateCertificateOptions', 'acm:AddTagsToCertificate', 'acm:RemoveTagsFromCertificate'],
+      actions: ['acm:DeleteCertificate', 'acm:UpdateCertificateOptions', 'acm:AddTagsToCertificate', 'acm:RemoveTagsFromCertificate'],
       resources: [certificate], conditions: owned,
     }),
     new PolicyStatement({
