@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -12,17 +13,31 @@ PARAMETERS = {
 }
 
 
-def aws(region, *args, payload=None):
+def aws(region, *args, stdin=None):
     # Provider keys reach the CLI only through stdin, never argv or inherited env.
     environment = {key: value for key, value in os.environ.items() if key not in PARAMETERS}
     result = subprocess.run(
-        ["aws", "--region", region, "--no-cli-pager", *args],
-        input=json.dumps(payload) if payload is not None else None,
+        ["aws", "--region", region, "--no-cli-pager", "--no-cli-auto-prompt", "--output", "json", *args],
+        input=stdin,
         text=True, capture_output=True, env=environment,
     )
     if result.returncode:
-        # CLI errors can include request bodies. Never echo captured output.
-        raise RuntimeError(f"AWS {args[0]} {args[1]} failed. Check deployment permissions and credentials.")
+        # CLI errors can include request bodies. Report only known error labels.
+        match = re.search(r"An error occurred \(([A-Za-z0-9]+)\)", result.stderr)
+        code = match.group(1) if match else None
+        explanations = {
+            "AccessDenied": "Check the deployment role's permissions.",
+            "AccessDeniedException": "Check the deployment role's permissions.",
+            "ParamValidation": "The AWS CLI rejected the request input.",
+            "ValidationException": "AWS rejected the parameter settings.",
+            "InvalidKeyId": "Check the SSM encryption key configuration.",
+            "ExpiredToken": "The AWS session expired.",
+            "ExpiredTokenException": "The AWS session expired.",
+            "ThrottlingException": "AWS rate-limited the request; retry the deployment.",
+            "TooManyUpdates": "Another update is in progress; retry the deployment.",
+        }
+        detail = f"{code}: {explanations[code]}" if code in explanations else f"AWS CLI exit {result.returncode}; raw output withheld to protect secrets."
+        raise RuntimeError(f"AWS {args[0]} {args[1]} failed. {detail}")
     return json.loads(result.stdout)
 
 
@@ -37,9 +52,11 @@ def sync(project, signup, environment):
     if identity["Account"] != project["account"] or identity["Arn"].endswith(":root"):
         raise RuntimeError("Use deployment credentials in the configured Big Naturals AWS account; root is not allowed.")
     for name, parameter in PARAMETERS.items():
-        aws(project["region"], "ssm", "put-parameter", "--cli-input-json", "file:///dev/stdin", payload={
-            "Name": parameter, "Type": "SecureString", "Value": values[name], "Overwrite": True,
-        })
+        # --cli-input-json can open its input more than once, exhausting a pipe.
+        # A single --value file argument reads stdin once; metadata is non-secret.
+        aws(project["region"], "ssm", "put-parameter",
+            "--name", parameter, "--type", "SecureString",
+            "--value", "file:///dev/stdin", "--overwrite", stdin=values[name])
         print(f"Stored {parameter} (encrypted).")
 
 

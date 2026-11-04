@@ -70,7 +70,10 @@ when AWS hosting moves.
    create it if absent. [AWS service-linked role documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/using-service-linked-roles.html)
 5. Set `enabled: true`, run the checks below, and deploy through the normal
    main-branch workflow. Before CDK deployment, the workflow copies both secrets
-   to encrypted SSM SecureStrings over stdin. It rejects missing secrets, wrong
+   to encrypted SSM SecureStrings using `--value file:///dev/stdin`. Only the
+   raw secret goes through stdin; non-secret parameter settings are CLI flags.
+   Do not use `--cli-input-json` with a pipe: the CLI can reread that input and
+   receive an empty JSON document. It rejects missing secrets, wrong
    accounts and root credentials; it never logs keys or stores them in files.
    Disabled signup skips secret writes. Writes are sequential: if the second
    fails, the first remains stored; correct the failure and rerun the latest
@@ -132,12 +135,17 @@ Browser tests start and stop their own local Nuxt server, mock both providers,
 use a test-only runtime configuration, and never subscribe a real contact.
 Local tests use installed Google Chrome; CI installs Playwright Chromium.
 
-Local verification on November 4, 2026 passed 30 backend/infrastructure tests plus five secret-transfer tests,
+Local verification on November 4, 2026 passed 30 backend/infrastructure tests plus seven secret-transfer tests,
 14 Chrome browser tests across desktop and 320px layouts, TypeScript checks,
 static generation, and production/example/access CDK synthesis. Browser
 coverage includes success, retry, throttling, script failure, token expiry,
 keyboard access, layout overflow and JavaScript-disabled behavior. This is
 pre-deployment evidence only.
+
+The secret-transfer tests exercise the actual AWS CLI's offline output-skeleton
+validation with dummy credentials and a loopback-only endpoint, in addition to
+mocked permission/error cases. Failures report known AWS error codes and fixed
+explanations without printing raw output that could contain key material.
 
 Production activation still requires a real Turnstile challenge, successful
 API response, and confirmed contact in the correct Brevo list. Ordinary public
