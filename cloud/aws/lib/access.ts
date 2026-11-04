@@ -101,8 +101,12 @@ export function executionStatements(project: ProjectConfig): PolicyStatement[] {
     new PolicyStatement({
       sid: 'RequestOnlySiteCertificates', actions: ['acm:RequestCertificate'], resources: ['*'],
       conditions: {
-        StringEquals: { 'aws:RequestTag/Project': accessNames.projectTag, 'acm:ValidationMethod': 'DNS', 'aws:RequestedRegion': project.region },
+        // Certificate creation must also work when CloudFormation applies tags
+        // separately. Domain, validation method, and region remain mandatory.
+        StringEquals: { 'acm:ValidationMethod': 'DNS', 'aws:RequestedRegion': project.region },
+        StringEqualsIfExists: { 'aws:RequestTag/Project': accessNames.projectTag },
         'ForAllValues:StringEquals': { 'acm:DomainNames': domains },
+        Null: { 'acm:DomainNames': 'false' },
       },
     }),
     new PolicyStatement({

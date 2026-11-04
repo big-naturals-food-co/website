@@ -97,6 +97,10 @@ The CloudFormation service role manages the exact site bucket and hosted zone.
 DNS changes allow only apex/www A/AAAA records and underscore-prefixed CNAMEs
 for certificate validation; MX/TXT email records are excluded. Certificate
 requests are restricted to the site's domain names and DNS validation.
+The request may omit the `Project` tag, allowing certificate creation when
+CloudFormation applies tags separately; if supplied, it must be
+`BigNaturalsFoodCo`. Domain names must be present and requests must target
+`us-east-1`. Subsequent certificate management still requires the project tag.
 Distribution/function/certificate operations use project-tag restrictions.
 Project ownership tags cannot be removed or changed.
 

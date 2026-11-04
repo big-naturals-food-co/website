@@ -90,6 +90,19 @@ test('execution scope excludes IAM and email DNS, retains ownership tags, and fi
   assert.ok(JSON.stringify({ Version: '2012-10-17', Statement: statements }).length < 10_240)
 })
 
+test('certificate creation permits deferred tagging without relaxing domain, DNS, or region restrictions', () => {
+  const statements = executionStatements(project).map(s => s.toStatementJson())
+  const request = statements.find(s => s.Sid === 'RequestOnlySiteCertificates')!
+  assert.deepEqual(request.Condition, {
+    StringEquals: { 'acm:ValidationMethod': 'DNS', 'aws:RequestedRegion': project.region },
+    StringEqualsIfExists: { 'aws:RequestTag/Project': accessNames.projectTag },
+    'ForAllValues:StringEquals': { 'acm:DomainNames': [project.domainName, ...project.redirectDomainNames] },
+    Null: { 'acm:DomainNames': 'false' },
+  })
+  const management = statements.find(s => s.Sid === 'ManageProjectCertificates')!
+  assert.equal(management.Condition.StringEquals['aws:ResourceTag/Project'], accessNames.projectTag)
+})
+
 test('assemblies use caller credentials and only the project service role, without bootstrap assets', () => {
   const app = new App()
   new SiteStack(app, project.stackName, { project })
