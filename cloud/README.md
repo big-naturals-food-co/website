@@ -5,7 +5,9 @@ The site is live at [bignaturalsfoodco.com](https://bignaturalsfoodco.com).
 The full production deployment was completed and verified locally on November 4,
 2026 using the operator with the same managed deployment policy as GitHub.
 See [deployment and rollback](DEPLOYMENT.md) for local and GitHub commands.
-There is no beta environment or application backend.
+There is no beta environment. A separate email signup backend is implemented
+with dedicated provider settings and deploys through the main workflow;
+see [SIGNUP.md](SIGNUP.md).
 
 ## Configuration
 
@@ -95,9 +97,9 @@ policy. The site uses its dedicated CloudFormation service role. See
 is independent of GitHub and is not a workflow prerequisite.
 
 The site assembly now passes only the dedicated project service role to
-CloudFormation. It uses the caller's deployment credentials directly, with no
+CloudFormation. Both site and signup use that role. It uses the caller's deployment credentials directly, with no
 shared CDK roles, bootstrap bucket, ECR repository, SSM bootstrap lookup, or
-asset uploads. The custom static synthesizer rejects file/Docker assets and
+asset uploads. The signup Lambda is packaged inline in its template. The custom static synthesizer rejects file/Docker assets and
 templates over CloudFormation's 51,200-byte inline limit. Website publication
 remains a separate workflow step.
 
@@ -105,7 +107,7 @@ The existing account bootstrap and OIDC provider are left unchanged. The
 GitHub role imports the provider and uses the repository's verified immutable
 OIDC subject, including owner/repository IDs and `refs/heads/main`. The access
 stack is maintained through the CLI by an administrator; the operator and
-GitHub role can deploy only the site stack and cannot edit their own IAM access.
+GitHub role can deploy only the site and signup stacks and cannot edit their own IAM access.
 See [permissions and their limits](ACCESS.md#permissions-and-their-limits).
 
 The site stack creates DNS aliases, so its first deployment must be followed

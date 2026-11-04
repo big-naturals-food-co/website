@@ -29,14 +29,23 @@ This runs locally and does not deploy to AWS.
 The page lives in `app/app.vue`; Tailwind theme colors and shared styles live
 in `app/assets/css/main.css`.
 
+Email signup lives in `app/components/SignupForm.vue`. Its public settings come
+from `../cloud/signup.json`; provider secrets stay in AWS and never enter the
+Nuxt build. The form stays hidden while `enabled` is false. See
+[provider setup and activation](../cloud/SIGNUP.md).
+
 ## Validate and generate
 
 ```sh
 npm run typecheck
 npm run generate
+npm run test:e2e
 ```
 
 The publishable output is `.output/public/`. HTML is prerendered at build time.
+Browser tests use installed Google Chrome locally (Playwright Chromium in CI),
+start/stop a local server on port 4173, and mock Turnstile and the signup API.
+They use test-only runtime overrides, never production credentials or contacts.
 Neither `200.html` nor `404.html` is emitted. CloudFront will redirect unknown
 page URLs to `/` once infrastructure is implemented; local preview does not
 simulate that behavior.

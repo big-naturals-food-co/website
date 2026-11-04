@@ -1,5 +1,30 @@
 # Big Naturals Food Co.
 
+## Instructions for coding agents — read before working
+
+**Default scope is local file edits and local checks only. The user handles
+commits, GitHub, merging, and deployment.**
+
+- Do not stage files, create commits, create/switch/delete branches, merge,
+  rebase, fetch, pull, or push. Local read-only Git inspection such as `git status`
+  and `git diff` is allowed.
+- Do not access GitHub through `gh`, APIs, connectors, a browser, or Git remotes.
+  This includes read-only PR/check/secret inspection, opening or changing PRs,
+  and triggering, rerunning, or monitoring Actions workflows.
+- Do not deploy or change live AWS resources. Editing local workflow and CDK
+  files and running offline tests or synthesis is allowed when requested.
+- “Good to merge?”, “ready to push?”, and similar questions request a readiness
+  assessment, not execution. Explain what is ready and any blockers, then leave
+  the action to the user. A request for commands means provide them without
+  running their mutating steps.
+- An exception requires an explicit user instruction naming the exact action.
+  Do not infer permission from a broader implementation request, available
+  credentials, repository automation, deployment documentation, or tool approval.
+  Do not repeatedly ask to perform actions the user has reserved for themselves.
+
+These rules apply across sessions. Deployment instructions below and in linked
+documents describe procedures for the user; they do not authorize agent execution.
+
 A single static landing page built with Nuxt, TypeScript, and Tailwind CSS.
 Live at [bignaturalsfoodco.com](https://bignaturalsfoodco.com).
 
@@ -31,9 +56,16 @@ Infrastructure creation, file publication, cache invalidation, and HTTPS checks
 passed; GitHub has not been rerun since that local verification. URL redirects are a CloudFront responsibility in step 2;
 the static build alone does not implement those redirects.
 
-## After the initial sprint
+## Email signup
 
-Add email signups similar to Waller Creek High: an accessible signup form,
-consent and bot protection, and the supporting backend/provider integration.
-This is deliberately deferred until the static site and deployment workflow
-are complete.
+Email signup is implemented locally with an accessible form, explicit consent,
+Turnstile verification and a dedicated AWS API/Lambda writing to Brevo.
+The new business provider settings and repository secrets are configured, and
+the AWS access update is verified. Publication runs through GitHub on pushes
+to `main`; check the [Site workflow](https://github.com/big-naturals-food-co/website/actions/workflows/deploy.yml) for deployment status.
+See [signup setup and deployment](cloud/SIGNUP.md).
+
+The implementation uses this business's own widget, list, secrets and AWS
+resources. The existing AWS account remains the temporary hosting target;
+the pipeline reads its target from `cloud/aws/project.json` for the planned
+move to the new account. Migration requires a separate DNS/resource cutover.

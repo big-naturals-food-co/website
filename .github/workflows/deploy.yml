@@ -16,8 +16,6 @@ concurrency:
 
 env:
   NUXT_TELEMETRY_DISABLED: '1'
-  AWS_REGION: us-east-1
-  AWS_ACCOUNT_ID: '066540957026'
 
 jobs:
   check:
@@ -51,6 +49,11 @@ jobs:
         run: |
           npm run typecheck
           npm run generate
+      - name: Test signup in desktop and mobile browsers
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - name: Validate publication files without AWS access
         working-directory: cloud/aws
         run: npm run publish:site -- --dry-run
@@ -96,6 +99,14 @@ jobs:
         run: |
           npm ci
           npm run synth
+      - name: Read target AWS account from project configuration
+        id: target
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, appendFileSync } from "node:fs";
+            const p = JSON.parse(readFileSync("cloud/aws/project.json", "utf8"));
+            appendFileSync(process.env.GITHUB_OUTPUT, `account=${p.account}\nregion=${p.region}\nstack=${p.stackName}\n`);
+          '
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: static-site-${{ github.sha }}
@@ -103,16 +114,23 @@ jobs:
       - name: Authenticate to AWS through GitHub OIDC
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          role-to-assume: arn:aws:iam::066540957026:role/big-naturals-food-co-github-deploy
+          role-to-assume: arn:aws:iam::${{ steps.target.outputs.account }}:role/big-naturals-food-co-github-deploy
           role-session-name: big-naturals-${{ github.run_id }}
           role-duration-seconds: 3600
-          aws-region: ${{ env.AWS_REGION }}
-          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+          aws-region: ${{ steps.target.outputs.region }}
+          allowed-account-ids: ${{ steps.target.outputs.account }}
           unset-current-credentials: true
-      - name: Deploy the site infrastructure
+      - name: Store signup keys in encrypted AWS parameters
+        env:
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+        run: python3 cloud/aws/scripts/signup-secrets.py
+      - name: Deploy the site and signup infrastructure
         working-directory: cloud/aws
+        env:
+          SITE_STACK: ${{ steps.target.outputs.stack }}
         run: >-
-          npm run cdk -- --app cdk.out deploy BigNaturalsFoodCoSite
+          npm run cdk -- --app cdk.out deploy "$SITE_STACK" BigNaturalsFoodCoSignup
           --method change-set --require-approval never
           --outputs-file cdk.out/deploy-outputs.json
       - name: Publish files and refresh CloudFront

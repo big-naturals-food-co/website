@@ -8,6 +8,8 @@ import { AccessStack } from '../lib/access-stack.js'
 import { accessNames, deploymentStatements, executionRoleArn, executionStatements, siteBucketArn } from '../lib/access.js'
 import { parseProjectConfig } from '../lib/config.js'
 import { SiteStack } from '../lib/site-stack.js'
+import { signupNames, parseSignupConfig } from '../lib/signup-config.js'
+import { SignupStack } from '../lib/signup-stack.js'
 import { StaticSynthesizer } from '../lib/static-synthesizer.js'
 
 const project = parseProjectConfig(JSON.parse(readFileSync(new URL('../project.example.json', import.meta.url), 'utf8')))
@@ -15,7 +17,7 @@ const project = parseProjectConfig(JSON.parse(readFileSync(new URL('../project.e
 test('access bootstrap creates only IAM, imports OIDC, and contains no passwords or keys', () => {
   const template = Template.fromStack(new AccessStack(new App(), accessNames.stack, { project }))
   template.resourceCountIs('AWS::IAM::User', 1)
-  template.resourceCountIs('AWS::IAM::Role', 2)
+  template.resourceCountIs('AWS::IAM::Role', 3)
   for (const type of ['AWS::IAM::AccessKey', 'AWS::IAM::OIDCProvider', 'AWS::S3::Bucket', 'AWS::Route53::RecordSet', 'AWS::CloudFront::Distribution']) {
     template.resourceCountIs(type, 0)
   }
@@ -59,12 +61,13 @@ test('deployment policy cannot alter IAM, use shared bootstrap roles, or manage 
   const text = JSON.stringify(statements)
   assert.ok(!text.includes('hnb659fds'))
   const iamActions = statements.flatMap(s => [s.Action].flat()).filter((a: string) => a.startsWith('iam:'))
-  assert.deepEqual(iamActions, ['iam:PassRole'])
+  assert.deepEqual(iamActions, ['iam:PassRole', 'iam:PassRole'])
+  assert.ok(!text.includes('ssm:'))
   const pass = statements.find(s => s.Sid === 'PassOnlyProjectExecutionRoleToCloudFormation')!
   assert.equal(pass.Resource, executionRoleArn(project))
   assert.equal(pass.Condition.StringEquals['iam:PassedToService'], 'cloudformation.amazonaws.com')
   for (const statement of statements.filter(s => [s.Action].flat().some((a: string) => a.startsWith('cloudformation:')))) {
-    assert.equal(statement.Resource, `arn:aws:cloudformation:${project.region}:${project.account}:stack/${project.stackName}/*`)
+    assert.deepEqual(statement.Resource, [project.stackName, signupNames.stack].map(name => `arn:aws:cloudformation:${project.region}:${project.account}:stack/${name}/*`))
   }
   assert.equal(statements.find(s => s.Sid === 'ManageSiteStack')!.Action, 'cloudformation:*')
   assert.ok(JSON.stringify({ Version: '2012-10-17', Statement: statements }).length < 6144)
@@ -73,7 +76,7 @@ test('deployment policy cannot alter IAM, use shared bootstrap roles, or manage 
 test('asset policies grant full service management with bucket, zone, account and region boundaries', () => {
   const statements = executionStatements(project).map(s => s.toStatementJson())
   const text = JSON.stringify(statements)
-  assert.ok(!text.includes('iam:'))
+  assert.deepEqual(statements.flatMap(s => [s.Action].flat()).filter((a: string) => a.startsWith('iam:')), ['iam:PassRole'])
   assert.ok(!text.includes('sts:'))
   assert.ok(!text.includes('aws:ResourceTag'))
   assert.ok(!text.includes('aws:RequestTag'))
@@ -93,6 +96,7 @@ test('assemblies use caller credentials and only the project service role, witho
   const app = new App()
   new SiteStack(app, project.stackName, { project })
   new AccessStack(app, accessNames.stack, { project })
+  new SignupStack(app, signupNames.stack, { project, signup: parseSignupConfig({ enabled: false, brevoListId: null, turnstileSiteKey: '' }) })
   const assembly = app.synth()
   const site = assembly.manifest.artifacts![project.stackName]!.properties! as AwsCloudFormationStackProperties
   const access = assembly.manifest.artifacts![accessNames.stack]!.properties! as AwsCloudFormationStackProperties
@@ -114,4 +118,17 @@ test('static synthesizer rejects file and Docker assets before permissions silen
   const synth = new StaticSynthesizer()
   assert.throws(() => synth.addFileAsset({ sourceHash: 'test', fileName: 'asset.txt' }), /no CDK file assets/)
   assert.throws(() => synth.addDockerImageAsset({ sourceHash: 'test', directoryName: 'image' }), /no Docker assets/)
+})
+
+test('only GitHub gets direct write access to the two signup secrets', () => {
+  const template = Template.fromStack(new AccessStack(new App(), accessNames.stack, { project }))
+  const resources = template.toJSON().Resources as Record<string, any>
+  const github = Object.entries(resources).find(([, resource]) => resource.Type === 'AWS::IAM::Role' && resource.Properties.RoleName === accessNames.githubRole)![0]
+  const writers = Object.values(resources).filter(resource => resource.Type === 'AWS::IAM::Policy'
+    && resource.Properties.PolicyDocument.Statement.some((statement: any) => [statement.Action].flat().includes('ssm:PutParameter')))
+  assert.equal(writers.length, 1)
+  assert.deepEqual(writers[0].Properties.Roles, [{ Ref: github }])
+  const statement = writers[0].Properties.PolicyDocument.Statement.find((statement: any) => [statement.Action].flat().includes('ssm:PutParameter'))
+  assert.deepEqual(statement.Resource, [signupNames.brevoParameter, signupNames.turnstileParameter].map(name => `arn:aws:ssm:${project.region}:${project.account}:parameter${name}`))
+  assert.deepEqual([statement.Action].flat(), ['ssm:PutParameter'])
 })

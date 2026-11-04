@@ -2,7 +2,8 @@ import { CfnOutput, Duration, RemovalPolicy, Stack, Tags, type StackProps } from
 import * as iam from 'aws-cdk-lib/aws-iam'
 import type { Construct } from 'constructs'
 import { parseProjectConfig, type ProjectConfig } from './config.js'
-import { accessNames, deploymentStatements, executionStatements } from './access.js'
+import { accessNames, deploymentStatements, executionStatements, signupRuntimeStatements } from './access.js'
+import { signupNames } from './signup-config.js'
 import { StaticSynthesizer } from './static-synthesizer.js'
 
 export class AccessStack extends Stack {
@@ -42,14 +43,24 @@ export class AccessStack extends Stack {
     })
     operator.addManagedPolicy(deployPolicy)
     github.addManagedPolicy(deployPolicy)
+    github.addToPolicy(new iam.PolicyStatement({
+      actions: ['ssm:PutParameter'],
+      resources: [signupNames.brevoParameter, signupNames.turnstileParameter].map(name => `arn:aws:ssm:${project.region}:${project.account}:parameter${name}`),
+    }))
 
     const execution = new iam.Role(this, 'CloudFormationExecution', {
       roleName: accessNames.executionRole,
-      description: 'Service role for the Big Naturals static site stack only; no IAM management.',
+      description: 'Service role for Big Naturals site and signup stacks; no IAM management.',
       assumedBy: new iam.ServicePrincipal('cloudformation.amazonaws.com'),
     })
     // Inline role policies avoid the managed policy 6,144-character limit.
     new iam.Policy(this, 'SiteExecution', { roles: [execution], statements: executionStatements(project) })
+
+    const signupRuntime = new iam.Role(this, 'SignupRuntime', {
+      roleName: signupNames.role,
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+    })
+    new iam.Policy(this, 'SignupRuntimePolicy', { roles: [signupRuntime], statements: signupRuntimeStatements(project) })
 
     new CfnOutput(this, 'OperatorUserName', { value: operator.userName })
     new CfnOutput(this, 'ConsoleSignInUrl', { value: `https://${project.account}.signin.aws.amazon.com/console/` })

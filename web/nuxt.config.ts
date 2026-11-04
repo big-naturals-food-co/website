@@ -1,8 +1,20 @@
 import tailwindcss from '@tailwindcss/vite'
+import signupSettings from '../cloud/signup.json'
+import project from '../cloud/aws/project.json'
+import { parseSignupConfig } from '../cloud/aws/lib/signup-config'
+
+const signup = parseSignupConfig(signupSettings)
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-04',
   devtools: { enabled: false },
+  runtimeConfig: {
+    public: {
+      signupEnabled: signup.enabled,
+      signupEndpoint: `https://api.${project.domainName}/subscribe`,
+      turnstileSiteKey: signup.turnstileSiteKey,
+    },
+  },
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
