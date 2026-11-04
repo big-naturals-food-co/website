@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #f6f1df;
+  --color-tomato: #b93124;
+  --color-ink: #302d25;
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+
+html {
+  background: var(--color-cream);
+}
+
+body {
+  margin: 0;
+}
+
+.wordmark {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  text-wrap: balance;
+}
+
+@media (max-width: 639px) {
+  .wordmark > span:first-child {
+    max-width: 7ch;
+    margin-inline: auto;
+    line-height: 0.9;
+  }
+}
