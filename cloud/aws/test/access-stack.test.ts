@@ -103,6 +103,23 @@ test('certificate creation permits deferred tagging without relaxing domain, DNS
   assert.equal(management.Condition.StringEquals['aws:ResourceTag/Project'], accessNames.projectTag)
 })
 
+test('pre-tag certificate inspection grants only scoped reads and leaves mutations tag-restricted', () => {
+  const statements = executionStatements(project).map(s => s.toStatementJson())
+  const inspect = statements.find(s => s.Sid === 'InspectCertificatesDuringCreation')!
+  assert.deepEqual(inspect.Action, ['acm:DescribeCertificate', 'acm:ListTagsForCertificate'])
+  assert.equal(inspect.Resource, `arn:aws:acm:${project.region}:${project.account}:certificate/*`)
+  assert.deepEqual(inspect.Condition, {
+    StringEqualsIfExists: { 'aws:ResourceTag/Project': accessNames.projectTag },
+  })
+  for (const action of ['acm:DeleteCertificate', 'acm:UpdateCertificateOptions', 'acm:RemoveTagsFromCertificate']) {
+    const grants = statements.filter(s => s.Effect === 'Allow' && [s.Action].flat().includes(action))
+    assert.equal(grants.length, 1)
+    assert.deepEqual(grants[0]!.Condition, {
+      StringEquals: { 'aws:ResourceTag/Project': accessNames.projectTag },
+    })
+  }
+})
+
 test('assemblies use caller credentials and only the project service role, without bootstrap assets', () => {
   const app = new App()
   new SiteStack(app, project.stackName, { project })

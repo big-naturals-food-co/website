@@ -100,8 +100,11 @@ requests are restricted to the site's domain names and DNS validation.
 The request may omit the `Project` tag, allowing certificate creation when
 CloudFormation applies tags separately; if supplied, it must be
 `BigNaturalsFoodCo`. Domain names must be present and requests must target
-`us-east-1`. Subsequent certificate management still requires the project tag.
-Distribution/function/certificate operations use project-tag restrictions.
+`us-east-1`. Certificate description and tag reads permit untagged resources
+in this account/region because CloudFormation reads immediately during creation,
+before separately applied tags are visible to IAM. Reads reject a different
+`Project` tag. Certificate modification and deletion still require the project
+tag. Distribution/function operations use project-tag restrictions.
 Project ownership tags cannot be removed or changed.
 
 **CloudFront scope limitation:** cache policies, response-header policies, and
@@ -128,9 +131,22 @@ Both templates fit CloudFormation's inline limit. The tests cover OIDC trust,
 policy scope, IAM size limits, and the absence of shared bootstrap roles/assets.
 AWS Access Analyzer and CloudFormation template validation passed; 23 read-only
 IAM simulations verified allowed site operations and denied cross-project,
-IAM-privilege, import, and email-DNS operations. The first website deployment,
-GitHub OIDC assumption, and optional operator sign-in still need their own live
-checks.
+IAM-privilege, import, and email-DNS operations. GitHub OIDC assumption worked
+in the initial deployment attempts. A successful website deployment and optional
+operator sign-in still need their own live checks.
+
+After updating IAM, run `AWS_PROFILE=default npm run verify:certificate-access`
+from `cloud/aws/` with an administrator session. This read-only check uses AWS
+IAM simulation against the deployed execution role. It covers certificate
+creation without tags, reads before/after tagging, initial tagging, project-only
+updates/deletion, and rejection of other accounts, regions, and projects.
+It does not substitute for an actual CloudFormation deployment.
+
+On November 4, run `41908900280` successfully requested and tagged the
+certificate, but its immediate `DescribeCertificate` call was denied by the
+resource-tag condition. CloudTrail confirms those operations and successful
+certificate deletion during rollback. The inspection permission above addresses
+that creation-time read; keeping all ACM actions behind existing tags does not.
 
 The IAM stack is ready and the [GitHub workflow](DEPLOYMENT.md) is implemented.
 Its role ARN is:
