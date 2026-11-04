@@ -2,15 +2,16 @@
 
 ## Instructions for coding agents — read before working
 
-**Default scope is local file edits and local checks only. The user handles
-commits, GitHub, merging, and deployment.**
+**Default scope is local file edits, local checks, and read-only GitHub
+inspection. The user handles commits, GitHub changes, merging, and deployment.**
 
 - Do not stage files, create commits, create/switch/delete branches, merge,
   rebase, fetch, pull, or push. Local read-only Git inspection such as `git status`
   and `git diff` is allowed.
-- Do not access GitHub through `gh`, APIs, connectors, a browser, or Git remotes.
-  This includes read-only PR/check/secret inspection, opening or changing PRs,
-  and triggering, rerunning, or monitoring Actions workflows.
+- Read-only GitHub actions are allowed, including inspecting PRs, checks,
+  workflow logs, and secret names (never secret values). Do not create or change
+  PRs, comments, repository settings, or secrets; do not trigger, rerun, cancel,
+  or approve Actions workflows. Git fetch/pull/push remain prohibited above.
 - Do not deploy or change live AWS resources. Editing local workflow and CDK
   files and running offline tests or synthesis is allowed when requested.
 - “Good to merge?”, “ready to push?”, and similar questions request a readiness
