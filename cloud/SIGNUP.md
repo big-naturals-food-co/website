@@ -3,8 +3,10 @@
 Configured and enabled in source. The Cloudflare public site key
 is saved, and the new business Brevo list ID is `4`. Both repository secret names
 were verified on November 4, 2026; their values have not been read or validated.
-The access update reached `UPDATE_COMPLETE` and a read-only CDK comparison
-confirmed no differences. The GitHub workflow copies the keys into AWS on
+The first access update completed, but deployment exposed missing permissions.
+A broader policy correction is now verified locally and awaits the user's IAM
+update. The signup stack is `ROLLBACK_COMPLETE` with a retained log group; it
+must be recovered before another deployment. The GitHub workflow copies the keys into AWS on
 pushes to `main`; deployment status is available in
 [Actions](https://github.com/big-naturals-food-co/website/actions/workflows/deploy.yml).
 `signup.json` is the shared,
@@ -65,7 +67,8 @@ when AWS hosting moves.
 4. Apply the access update in [ACCESS.md](ACCESS.md) when setting up an account.
    It creates the dedicated runtime role and grants the main-only GitHub role
    write access to exactly the two signup parameters. This update was applied
-   and verified on November 4, 2026. The existing `AWSServiceRoleForAPIGateway` prerequisite was
+   on November 4, 2026, but the subsequent correction described in ACCESS.md is
+   still pending. The existing `AWSServiceRoleForAPIGateway` prerequisite was
    verified in the current account. In a new account, an administrator must
    create it if absent. [AWS service-linked role documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/using-service-linked-roles.html)
 5. Set `enabled: true`, run the checks below, and deploy through the normal
@@ -128,6 +131,11 @@ update the two repository secrets and rerun the latest main workflow. Allow
 
 ## Verification
 
+For the permission fix, start with the [local IAM checks](ACCESS.md#check-the-fix-locally-before-applying-it).
+The proposed policy passes 115 AWS simulator checks; the live-role check also
+reports rollback and retained-resource blockers. A passing simulation does not
+replace a successful GitHub integration run or a real signup.
+
 From `cloud/aws/`: `npm run typecheck`, `npm test`, `npm run synth`,
 `npm run synth:access`, and `npm run synth:example`.
 From `web/`: `npm run typecheck`, `npm run generate`, and `npm run test:e2e`.
@@ -150,6 +158,39 @@ explanations without printing raw output that could contain key material.
 Production activation still requires a real Turnstile challenge, successful
 API response, and confirmed contact in the correct Brevo list. Ordinary public
 site verification checks the static page/assets, not provider credentials.
+
+## Failed initial deployment recovery
+
+The November 4 failed signup creation rolled back to `ROLLBACK_COMPLETE` with
+termination protection enabled. Its log group
+`/aws/lambda/big-naturals-food-co-signup` was `DELETE_SKIPPED`. The site stack
+and signup secrets do not need to be deleted. Another unchanged main deployment
+will not fix this state.
+
+After the user applies the IAM correction, recovery must address both the failed
+stack record and the retained log group. The read-only preflight reports them
+separately. Removing the failed stack record requires disabling its termination
+protection first; that does not remove a retained log group. The existing workflow
+does not enable automatic resource import, so the retained name will collide on
+recreation unless the group is imported or explicitly removed by the user.
+
+Before choosing removal, inspect metadata and stream existence without reading
+log contents:
+
+```sh
+aws cloudformation list-stack-resources --profile default --region us-east-1 \
+  --stack-name BigNaturalsFoodCoSignup
+aws logs describe-log-groups --profile default --region us-east-1 \
+  --log-group-name-prefix /aws/lambda/big-naturals-food-co-signup
+aws logs describe-log-streams --profile default --region us-east-1 \
+  --log-group-name /aws/lambda/big-naturals-food-co-signup
+```
+
+Preserve any log group containing data. CloudFormation supports importing a named
+retained log group; [AWS's auto-import requirements](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/import-resources-automatically.html)
+describe that recovery option. Recovery has not been executed, and this change
+does not silently delete or import resources. GitHub integration and production
+signup verification remain pending after local permission verification.
 
 ## Moving to the new AWS account
 

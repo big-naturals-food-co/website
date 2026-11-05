@@ -4,11 +4,58 @@ The IAM access stack can be provisioned directly through the AWS CLI. Manual
 Console template upload is not required. Local deployments are permitted when
 useful; a local website deployment is not a prerequisite to GitHub deployment.
 
-**Status: IAM policies updated through the CLI on November 4, 2026.**
-The signup permission update is applied: `BigNaturalsFoodCoAccess` reached
-`UPDATE_COMPLETE`, and a read-only CDK comparison found no template differences.
-The operator and GitHub role share broad asset-management permissions. The
-access stack retains termination protection and remains administrator-managed.
+**Status: a further IAM correction is prepared locally and must be applied by the user.**
+The earlier access update completed, but its policy omitted API Gateway tagging
+and CloudFormation log-policy/discovery permissions. A matching deployed template
+did not prove the policy was sufficient. The revised policy uses `apigateway:*`
+on the regional API and project domain resources, `logs:*` on the signup log group,
+regional log metadata discovery, and hosted-zone discovery. The access stack
+retains termination protection and remains administrator-managed.
+
+## Check the fix locally before applying it
+
+From `cloud/aws/`, use an administrator profile for these **read-only** checks:
+
+```sh
+npm run typecheck && npm test && npm run synth:access && npm run synth
+npm run verify:signup-access -- --profile default --policy proposed --permissions-only
+npm run verify:signup-access -- --profile default
+```
+
+The proposed check synthesizes the access policy from current source in memory
+and sends its actual attached policy documents to AWS's IAM simulator. The live
+check simulates the deployed CloudFormation, GitHub, and Lambda roles and inspects
+the signup stack, retained log-group collisions, and API Gateway service role.
+Neither command changes AWS resources or retrieves secret values. The live check
+exits nonzero while permissions or stack-state blockers remain.
+
+On November 4, 2026, the proposed policy passed **115/115** action/resource checks;
+the deployed roles passed **104/115**. The live stack was `ROLLBACK_COMPLETE` with
+termination protection, and the signup log group was retained after rollback.
+These are separate blockers; applying IAM alone does not recover the failed stack.
+
+The probes cover the configured signup resource types and lifecycle operations.
+They fail on new unreviewed resource types, but property changes also need review.
+Optional VPC/EFS, private CA, custom KMS keys, S3 code, log indexes, and mutual TLS
+are not configured or fully tested. IAM simulation is not a deployment: service
+behavior, quotas, organization/resource policies, real log delivery, and GitHub
+OIDC integration still require verification. The simulator requires HTTP-method
+and named API Gateway actions in separate calls. Its log-stream evaluation also
+requires a wildcard suffix even with an unrestricted policy; the runtime probe
+uses that accepted format and does not claim real log delivery has been tested.
+
+After those local checks, **the user** applies only the IAM update:
+
+```sh
+npm run cdk -- --app cdk.out/access deploy BigNaturalsFoodCoAccess \
+  --profile default --region us-east-1 --method change-set --require-approval any-change
+npm run verify:signup-access -- --profile default
+```
+
+The second command should show all permission probes allowed after propagation;
+it will still fail on the rollback/resource blockers until those are recovered.
+See [signup recovery](SIGNUP.md#failed-initial-deployment-recovery). The agent
+does not run the IAM update, stack recovery, commits, or workflow triggers.
 
 ## One-time CLI bootstrap
 
@@ -96,12 +143,12 @@ Both deployment identities and the CloudFormation execution role have:
 | Service | Permissions and scope |
 | --- | --- |
 | S3 | `s3:*` on the named site bucket and all objects/versions within it |
-| Route 53 | `route53:*` on the site's hosted zone and change records |
+| Route 53 | `route53:*` on the site's hosted zone and change records; hosted-zone discovery |
 | CloudFront | `cloudfront:*` on this account's resources, plus creation/listing APIs |
 | ACM | `acm:*` on this account's certificates in `us-east-1`, plus certificate requests/listing in that region |
 | Lambda | Management of only `big-naturals-food-co-signup`; pass only its runtime role to Lambda |
-| CloudWatch Logs | Lifecycle/retention/tag operations for the signup log group; region-wide log-group listing |
-| API Gateway | API management in this region and domain creation/listing; existing custom-domain and certificate management only for the site's `api` hostname |
+| CloudWatch Logs | `logs:*` on the signup log group and streams; region-wide `Describe*`/`List*` metadata discovery |
+| API Gateway | `apigateway:*` on regional HTTP APIs, the domain collection, project `api` domain and mappings, and tagging paths |
 
 There are no request-tag, existing-tag, record-type, or per-operation restrictions
 on those assets. Tags remain useful metadata, not deployment authorization gates.
@@ -134,7 +181,7 @@ the same managed deployment policy used by GitHub. An administrator created a
 one-use operator access key for the local run; it stayed in process memory and
 was deleted after verification. No persistent key or profile was installed.
 
-The IAM stack is ready and the [GitHub workflow](DEPLOYMENT.md) is implemented.
+The IAM correction and stack recovery above are pending. The [GitHub workflow](DEPLOYMENT.md) is implemented.
 Its role ARN is:
 
 ```text
