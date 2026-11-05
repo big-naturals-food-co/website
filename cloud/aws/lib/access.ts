@@ -46,6 +46,9 @@ export function executionStatements(project: ProjectConfig): PolicyStatement[] {
       resources: [`arn:aws:route53:::hostedzone/${project.hostedZoneId}`, 'arn:aws:route53:::change/*'],
     }),
     new PolicyStatement({
+      sid: 'DiscoverHostedZones', actions: ['route53:ListHostedZones*'], resources: ['*'],
+    }),
+    new PolicyStatement({
       sid: 'ManageCdn', actions: ['cloudfront:*'],
       resources: [`arn:aws:cloudfront::${project.account}:*`],
     }),
@@ -66,16 +69,17 @@ export function executionStatements(project: ProjectConfig): PolicyStatement[] {
       resources: [`arn:aws:lambda:${project.region}:${project.account}:function:${signupNames.function}`],
     }),
     new PolicyStatement({
-      sid: 'ManageSignupLogs', actions: ['logs:CreateLogGroup', 'logs:PutRetentionPolicy', 'logs:DeleteRetentionPolicy', 'logs:DeleteLogGroup', 'logs:TagResource', 'logs:UntagResource', 'logs:ListTagsForResource'],
+      sid: 'ManageSignupLogs', actions: ['logs:*'],
       resources: [`arn:aws:logs:${project.region}:${project.account}:log-group:${signupNames.logs}`, `arn:aws:logs:${project.region}:${project.account}:log-group:${signupNames.logs}:*`],
     }),
     new PolicyStatement({
-      sid: 'ListLogGroups', actions: ['logs:DescribeLogGroups'], resources: ['*'],
+      // CloudFormation also reads account-level policies while managing a group.
+      sid: 'DiscoverLogConfiguration', actions: ['logs:Describe*', 'logs:List*'], resources: ['*'],
       conditions: { StringEquals: { 'aws:RequestedRegion': project.region } },
     }),
     // API IDs do not exist before creation; management is scoped to this region.
     new PolicyStatement({
-      sid: 'ManageHttpApis', actions: ['apigateway:GET', 'apigateway:POST', 'apigateway:PUT', 'apigateway:PATCH', 'apigateway:DELETE'],
+      sid: 'ManageHttpApis', actions: ['apigateway:*'],
       resources: [`arn:aws:apigateway:${project.region}::/apis`, `arn:aws:apigateway:${project.region}::/apis/*`,
         `arn:aws:apigateway:${project.region}::/domainnames`,
         `arn:aws:apigateway:${project.region}::/domainnames/api.${project.domainName}`, `arn:aws:apigateway:${project.region}::/domainnames/api.${project.domainName}/*`,
@@ -85,10 +89,6 @@ export function executionStatements(project: ProjectConfig): PolicyStatement[] {
       sid: 'PassOnlySignupRuntimeRoleToLambda', actions: ['iam:PassRole'],
       resources: [`arn:aws:iam::${project.account}:role/${signupNames.role}`],
       conditions: { StringEquals: { 'iam:PassedToService': 'lambda.amazonaws.com' } },
-    }),
-    new PolicyStatement({
-      sid: 'ManageSignupDomainCertificate', actions: ['apigateway:AddCertificateToDomain', 'apigateway:RemoveCertificateFromDomain'],
-      resources: [`arn:aws:apigateway:${project.region}::/domainnames/api.${project.domainName}`],
     }),
   ]
 }
