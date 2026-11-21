@@ -12,3 +12,4 @@ cdk.out/
 test-results/
 playwright-report/
 __pycache__/
+/.emails/
