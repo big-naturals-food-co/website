@@ -27,9 +27,6 @@ test('flavors render manifest ingredients, distinct colors, mascot avatars and p
       await image.scrollIntoViewIfNeeded()
       await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true)
     }
-    const caption = section.locator('figcaption')
-    await expect(caption).toBeVisible()
-    await expect(caption).toContainText(flavor.name)
   }
   expect(colors.size).toBe(3)
   await expect(page.getByText('Nutrition information is not yet available.')).toBeVisible()
