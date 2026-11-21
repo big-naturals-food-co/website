@@ -110,7 +110,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section v-if="enabled" class="mt-6 w-full" aria-labelledby="signup-heading">
-    <h2 id="signup-heading" class="text-sm font-bold">Be first to hear what’s growing.</h2>
+    <h2 id="signup-heading" class="text-sm font-bold">Be in the know for that granola drop!</h2>
     <p v-if="accepted" ref="success" tabindex="-1" role="status" class="mt-4 rounded-xl border border-forest/40 px-5 py-5 text-sm leading-relaxed focus:outline-2 focus:outline-offset-4 focus:outline-forest">
       Thanks! Your signup request is received. Keep an eye on your inbox for news from Big Naturals Food Co.
     </p>

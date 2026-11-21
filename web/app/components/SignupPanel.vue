@@ -11,7 +11,7 @@ withDefaults(defineProps<{ headingTag?: 'h1' | 'h2' }>(), { headingTag: 'h2' })
     </div>
     <div class="signup-panel-content">
       <component :is="headingTag" class="signup-panel-heading">The goose will<br>soon be loose!</component>
-      <p class="signup-panel-description">We’re just getting started. More soon.</p>
+      <p class="signup-panel-description">Bringing big goose energy to natural foods and whole ingredients.</p>
       <SignupForm />
     </div>
   </div>
