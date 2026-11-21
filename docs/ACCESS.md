@@ -4,7 +4,17 @@ The IAM access stack can be provisioned directly through the AWS CLI. Manual
 Console template upload is not required. Local deployments are permitted when
 useful; a local website deployment is not a prerequisite to GitHub deployment.
 
-**Status: a further IAM correction is prepared locally and must be applied by the user.**
+**Status checked November 21, 2026:** [GitHub run 41939388598](https://github.com/big-naturals-food-co/website/actions/runs/41939388598)
+successfully deployed both stacks and verified HTTPS on November 4
+(America/Chicago), after the failure described below. Do not repeat historical
+recovery steps without a fresh preflight. After renewing the local login,
+proposed and live policies each passed 115/115 checks on November 21. Signup
+was `CREATE_COMPLETE`, with no unmanaged log-group collision and the required
+API Gateway service role present. The site was `UPDATE_COMPLETE`; CloudFront
+was deployed and enabled. Nine additional route-update/cache-invalidation IAM
+checks passed against the deployed resources and roles.
+
+The following describes the earlier permission correction and how to check it.
 The earlier access update completed, but its policy omitted API Gateway tagging
 and CloudFormation log-policy/discovery permissions. A matching deployed template
 did not prove the policy was sufficient. The revised policy uses `apigateway:*`
@@ -44,7 +54,8 @@ and named API Gateway actions in separate calls. Its log-stream evaluation also
 requires a wildcard suffix even with an unrestricted policy; the runtime probe
 uses that accepted format and does not claim real log delivery has been tested.
 
-After those local checks, **the user** applies only the IAM update:
+If fresh checks identify missing permissions that the proposed policy fixes,
+**the user** applies only the IAM update:
 
 ```sh
 npm run cdk -- --app cdk.out/access deploy BigNaturalsFoodCoAccess \
@@ -53,7 +64,7 @@ npm run verify:signup-access -- --profile default
 ```
 
 The second command should show all permission probes allowed after propagation;
-it will still fail on the rollback/resource blockers until those are recovered.
+it will still fail if separate rollback/resource blockers remain.
 See [signup recovery](SIGNUP.md#failed-initial-deployment-recovery). The agent
 does not run the IAM update, stack recovery, commits, or workflow triggers.
 
@@ -181,7 +192,10 @@ the same managed deployment policy used by GitHub. An administrator created a
 one-use operator access key for the local run; it stayed in process memory and
 was deleted after verification. No persistent key or profile was installed.
 
-The IAM correction and stack recovery above are pending. The [GitHub workflow](DEPLOYMENT.md) is implemented.
+The later successful GitHub deployment supersedes the historical pending-recovery
+status above. Recheck live permissions and stack state before the next release;
+see the [deployment checklist](workflows/deploy-temporary-site.md).
+The [GitHub workflow](DEPLOYMENT.md) is implemented.
 Its role ARN is:
 
 ```text

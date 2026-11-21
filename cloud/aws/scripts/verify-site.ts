@@ -9,7 +9,7 @@ const directory = fileURLToPath(new URL('../../../web/.output/public/', import.m
 for (let attempt = 1; attempt <= 12; attempt++) {
   try {
     await verifySite(directory, project)
-    console.log(`Verified https://${project.domainName}: exact build, assets, and root redirects.`)
+    console.log(`Verified https://${project.domainName}: both pages, assets, payloads, and canonical redirects.`)
     break
   } catch (error) {
     if (attempt === 12) throw error

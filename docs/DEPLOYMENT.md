@@ -1,5 +1,8 @@
 # GitHub deployments
 
+For the upcoming brand and Goose Nibbles release, use the
+[deployment checklist](workflows/deploy-temporary-site.md).
+
 The [Site workflow](../.github/workflows/deploy.yml) checks pull requests and
 deploys production on pushes to `main`. There is no beta, release trigger,
 manual dispatch, or GitHub Environment. IAM trusts the exact immutable
@@ -26,16 +29,17 @@ see [access setup](ACCESS.md).
 4. Upload immutable Nuxt assets first, followed by short-lived files, HTML, and
    the mutable latest-build marker. Retain old files and versions. Invalidate
    CloudFront and wait for completion.
-5. Verify HTTPS: the public homepage and referenced CSS/JS/favicon must exactly
-   match the build artifact, and unknown page URLs plus `www` must redirect to
-   the canonical root. Retry briefly for initial DNS/cache propagation.
+5. Verify HTTPS: both public pages, referenced assets, and page payloads must
+   exactly match the build artifact. Check unknown-page and alternate-host
+   redirects, plus Goose Nibbles trailing-slash and index aliases. Retry
+   briefly for initial DNS/cache propagation.
 
 The workflow serializes runs for each ref without cancelling an active
 deployment. GitHub may replace a pending run with a newer push; the main-tip
 check prevents an old rerun from publishing over newer code. All third-party
 Actions are pinned to reviewed release commit SHAs. No AWS access keys or repository
 variables need to be entered: the account, region and role ARN are derived
-from `aws/project.json`. The `BREVO_API_KEY` and `TURNSTILE_SECRET` repository Actions secrets are
+from `cloud/aws/project.json`. The `BREVO_API_KEY` and `TURNSTILE_SECRET` repository Actions secrets are
 copied into encrypted AWS SSM parameters before signup deployment;
 see [the required first-time access update and setup](SIGNUP.md).
 The expected AWS account is checked during authentication
@@ -64,8 +68,10 @@ main workflow after correcting the cause. Uploads overwrite matching keys but
 never delete old assets or versions. The site can already be live if the final
 verification step fails; inspect the failed assertion before assuming rollback.
 
-For a frontend rollback, restore `web/` from a known-good commit in a new PR,
-preserving the current workflow and infrastructure. Merge that PR to publish
+For a frontend rollback, restore the desired frontend behavior in a new PR,
+preserving the required home and Goose Nibbles output. Returning to the old
+one-page site also requires coordinated publication and routing changes.
+Merge the checked PR to publish
 the restored site through the normal main workflow. Do not rerun an old
 commit's deployment: the main-tip guard deliberately rejects it. Infrastructure
 rollback needs review of the resource changes; do not delete the retained

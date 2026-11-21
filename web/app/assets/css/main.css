@@ -1,32 +1,91 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Luckiest Guy";
+  src: url("../fonts/LuckiestGuy-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --color-cream: #f6f1df;
-  --color-tomato: #b93124;
-  --color-ink: #302d25;
+  --color-sky: #bdf3ff;
+  --color-leaf: #e1ffcd;
+  --color-coral: #ffd0cc;
+  --color-coral-dark: #ea9a91;
+  --color-forest: #3b4b30;
+  --color-ink: #3b4b30;
   --font-sans: "Helvetica Neue", Arial, sans-serif;
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-display: "Luckiest Guy", "Arial Black", sans-serif;
 }
 
-html {
-  background: var(--color-cream);
+html { background: white; color: var(--color-forest); scroll-padding-top: 2rem; }
+body { margin: 0; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+::selection { background: var(--color-coral); color: var(--color-forest); }
+:focus-visible { outline: 2px solid var(--color-forest); outline-offset: 5px; }
+.site-shell { min-height: 100svh; display: flex; flex-direction: column; }
+.skip-link { position: absolute; top: -5rem; left: 1rem; z-index: 10; background: white; padding: 1rem; }
+.skip-link:focus { top: 1rem; }
+.site-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem clamp(1.25rem, 5vw, 5rem); background: var(--color-sky); }
+.header-home { display: block; width: min(11.375rem, calc(100% - 4rem)); }
+.header-home img { display: block; width: 100%; height: auto; }
+.header-actions { display: flex; align-items: center; gap: 1.25rem; }
+.menu-button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-forest); border-radius: 50%; cursor: pointer; background: transparent; color: inherit; flex-shrink: 0; }
+.menu-button:hover { background: var(--color-coral); }
+.menu-button:focus-visible { outline: none; border-width: 3px; background: var(--color-coral); }
+.navigation-open { overflow: hidden; }
+.navigation-dialog { position: fixed; inset: 7rem clamp(1.25rem, 5vw, 5rem) auto auto; width: 20rem; max-width: calc(100% - 2.5rem); margin: 0; padding: 1.5rem; border: 1px solid var(--color-forest); border-radius: 1rem; background: var(--color-leaf); color: var(--color-forest); box-shadow: 0 12px 36px #3b4b3020; }
+.navigation-dialog::backdrop { background: #3b4b301c; }
+.navigation-dialog:focus { outline: none; }
+.navigation-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: .875rem; font-weight: 700; }
+.navigation-links { display: grid; margin-top: 1.5rem; }
+.navigation-links a { padding: 1rem 0; font-size: 1.5rem; font-family: var(--font-display); border-top: 1px solid #3b4b3033; text-decoration: none; }
+.navigation-links a[href]:hover { text-decoration: underline; text-underline-offset: .3em; }
+.home-main { flex: 1; width: 100%; max-width: 1200px; margin-inline: auto; padding: 3rem 2rem 4rem; }
+.site-footer { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 1.5rem clamp(1.25rem, 5vw, 5rem); background: var(--color-coral); font-size: .8125rem; text-align: right; }
+
+.nibbles-main { flex: 1; }
+.nibbles-intro { max-width: 1200px; margin-inline: auto; padding: 3.5rem 2rem 3rem; text-align: center; }
+.nibbles-eyebrow { font-size: .875rem; margin-bottom: 1rem; }
+.nibbles-title { font-family: var(--font-display); font-size: clamp(3rem, 7vw, 5.5rem); line-height: 1.05; }
+.flavor-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem 1rem; margin-top: 1.5rem; }
+.flavor-links a { display: inline-flex; align-items: center; min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--color-forest); border-radius: 2rem; font-size: .875rem; text-decoration: none; }
+.flavor-links a:hover { background: var(--color-leaf); }
+.flavor-section { padding: 3.5rem 2rem; scroll-margin-top: 1rem; }
+.flavor-section--coral { background: var(--color-coral); }
+.flavor-section--sky { background: var(--color-sky); }
+.flavor-section--leaf { background: var(--color-leaf); }
+.flavor-content { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); column-gap: clamp(2rem, 5vw, 5rem); row-gap: 1.5rem; max-width: 1136px; margin-inline: auto; align-items: center; }
+.flavor-heading { display: flex; align-items: center; gap: 1.5rem; }
+.flavor-heading h2 { font-family: var(--font-display); font-size: clamp(2rem, 3.5vw, 3rem); line-height: 1.1; }
+.flavor-subtitle { margin-top: .5rem; font-size: 1rem; line-height: 1.5; }
+.flavor-avatar { width: 7rem; height: 7rem; object-fit: cover; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--color-forest); }
+.flavor-ingredients { align-self: start; font-size: 1rem; line-height: 1.8; }
+.flavor-photo { grid-column: 2; grid-row: 1 / 3; text-align: center; }
+.flavor-photo img { width: 100%; height: auto; }
+.flavor-photo figcaption { font-size: .875rem; margin-top: .5rem; }
+.nibbles-closing { max-width: 1200px; margin-inline: auto; padding: 2.5rem 2rem 3.5rem; }
+.nutrition-notice { text-align: center; font-size: 1rem; line-height: 1.6; }
+.nibbles-signup { margin-top: 2.5rem; }
+
+@media (min-width: 768px) {
+  .home-main { display: grid; align-items: center; padding-block: 3rem; }
 }
 
-body {
-  margin: 0;
-}
-
-.wordmark {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 900;
-  letter-spacing: -0.075em;
-  text-wrap: balance;
-}
-
-@media (max-width: 639px) {
-  .wordmark > span:first-child {
-    max-width: 7ch;
-    margin-inline: auto;
-    line-height: 0.9;
-  }
+@media (max-width: 767px) {
+  .nibbles-intro { padding: 2.5rem 1.25rem 2rem; }
+  .flavor-section { padding: 2rem 1.25rem; }
+  .flavor-content { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  .flavor-heading { gap: 1rem; }
+  .flavor-heading h2 { font-size: clamp(1.75rem, 6vw, 2.5rem); }
+  .flavor-avatar { width: 4.5rem; height: 4.5rem; }
+  .flavor-photo { grid-column: 1; grid-row: auto; width: min(100%, 360px); margin-inline: auto; }
+  .nibbles-closing { padding: 2rem 1.25rem 2.5rem; }
+  .site-header { padding-block: .75rem; }
+  .home-main { padding: 2rem 1.25rem 2.5rem; }
+  .navigation-dialog { inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; border: 0; border-radius: 0; padding: 1.25rem; }
+  .navigation-links { margin-top: 3rem; }
+  .navigation-links a { font-size: 2.5rem; padding-block: 1.5rem; }
 }

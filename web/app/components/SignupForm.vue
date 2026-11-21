@@ -4,7 +4,6 @@ import { loadTurnstile, type TurnstileApi } from '~/utils/turnstile'
 const config = useRuntimeConfig().public
 const enabled = computed(() => String(config.signupEnabled) === 'true' && !!config.signupEndpoint && !!config.turnstileSiteKey)
 const email = ref('')
-const consent = ref(false)
 const name = ref('')
 const token = ref('')
 const mounted = ref(false)
@@ -60,7 +59,7 @@ async function verify() {
 }
 
 async function submit() {
-  if (!enabled.value || !mounted.value || busy.value || accepted.value || !consent.value || !token.value) return
+  if (!enabled.value || !mounted.value || busy.value || accepted.value || !token.value) return
   if (name.value) { message.value = 'Unable to process signup. Please refresh and try again.'; return }
   busy.value = true
   message.value = ''
@@ -70,7 +69,7 @@ async function submit() {
     const result = await fetch(config.signupEndpoint, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       credentials: 'omit', redirect: 'error', signal: controller.signal,
-      body: JSON.stringify({ email: email.value.trim(), consent: consent.value, name: name.value, source: 'landing-page', turnstileToken: token.value }),
+      body: JSON.stringify({ email: email.value.trim(), consent: true, name: name.value, source: 'landing-page', turnstileToken: token.value }),
     })
     if (!result.ok) {
       if (result.status === 429) message.value = 'Too many requests right now. Please wait a minute and try again.'
@@ -81,7 +80,6 @@ async function submit() {
     if (body.accepted !== true) throw new Error('Unexpected response')
     accepted.value = true
     email.value = ''
-    consent.value = false
     ++attempt
     if (widgetId !== undefined) turnstile?.remove(widgetId)
     widgetId = undefined
@@ -111,16 +109,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section v-if="enabled" class="mt-8 w-full max-w-md sm:mt-10" aria-labelledby="signup-heading">
+  <section v-if="enabled" class="mt-6 w-full" aria-labelledby="signup-heading">
     <h2 id="signup-heading" class="text-sm font-bold">Be first to hear what’s growing.</h2>
-    <p v-if="accepted" ref="success" tabindex="-1" role="status" class="mt-4 rounded-xl border border-tomato/40 px-5 py-5 text-sm leading-relaxed focus:outline-2 focus:outline-offset-4 focus:outline-tomato">
+    <p v-if="accepted" ref="success" tabindex="-1" role="status" class="mt-4 rounded-xl border border-forest/40 px-5 py-5 text-sm leading-relaxed focus:outline-2 focus:outline-offset-4 focus:outline-forest">
       Thanks! Your signup request is received. Keep an eye on your inbox for news from Big Naturals Food Co.
     </p>
     <form v-else class="mt-4 text-left" :aria-busy="busy" @submit.prevent="submit">
-      <label for="signup-email" class="mb-2 block text-xs font-bold">Email address</label>
+      <label for="signup-email" class="mb-2 block text-sm font-bold">Email address</label>
       <div class="flex flex-col gap-2 sm:flex-row">
-        <input id="signup-email" v-model="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" :spellcheck="false" maxlength="254" required :disabled="!mounted || busy" aria-describedby="signup-privacy signup-message" placeholder="you@example.com" class="min-w-0 flex-1 rounded-lg border border-tomato/50 bg-transparent px-4 py-3 text-base text-ink placeholder:text-ink/45 focus:outline-2 focus:outline-offset-2 focus:outline-tomato">
-        <button type="submit" :disabled="!mounted || busy || !token || !consent" class="rounded-lg bg-tomato px-6 py-3 text-sm font-bold text-cream focus:outline-2 focus:outline-offset-2 focus:outline-tomato disabled:cursor-not-allowed disabled:opacity-50">
+        <input id="signup-email" v-model="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" :spellcheck="false" maxlength="254" required :disabled="!mounted || busy" aria-describedby="signup-privacy signup-message" placeholder="you@example.com" class="min-w-0 flex-1 rounded-lg border border-forest/50 bg-white px-4 py-3 text-base text-ink placeholder:text-ink/45 focus:outline-2 focus:outline-offset-2 focus:outline-forest">
+        <button type="submit" :disabled="!mounted || busy || !token" class="rounded-lg bg-forest px-5 py-3 text-sm font-bold text-white focus:outline-2 focus:outline-offset-2 focus:outline-forest disabled:cursor-not-allowed disabled:opacity-50">
           {{ busy ? 'Signing up…' : 'Keep me posted' }}
         </button>
       </div>
@@ -128,21 +126,17 @@ onBeforeUnmount(() => {
         <label for="signup-name">Leave this empty</label>
         <input id="signup-name" v-model="name" name="name" tabindex="-1" autocomplete="off" type="text">
       </div>
-      <label class="mt-4 flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-ink/80">
-        <input v-model="consent" name="consent" type="checkbox" required :disabled="!mounted || busy" class="mt-0.5 size-4 shrink-0 accent-tomato focus:outline-2 focus:outline-offset-2 focus:outline-tomato">
-        <span>I’d like email updates from Big Naturals Food Co. I can unsubscribe anytime.</span>
-      </label>
-      <p id="signup-privacy" class="mt-2 text-xs leading-relaxed text-ink/65">We use Brevo to manage email updates and Cloudflare Turnstile to prevent spam.</p>
       <div class="mt-3 flex flex-col items-center gap-2">
         <div ref="challenge" />
-        <p v-if="verificationMessage" role="status" class="text-center text-xs leading-relaxed text-ink/75">{{ verificationMessage }}</p>
-        <button v-if="verificationFailed" type="button" :disabled="busy" class="rounded px-3 py-2 text-xs font-bold underline underline-offset-4 focus:outline-2 focus:outline-tomato" @click="verify">Retry verification</button>
+        <p v-if="verificationMessage" role="status" class="text-center text-sm leading-relaxed text-ink/75">{{ verificationMessage }}</p>
+        <button v-if="verificationFailed" type="button" :disabled="busy" class="rounded px-3 py-2 text-sm font-bold underline underline-offset-4 focus:outline-2 focus:outline-forest" @click="verify">Retry verification</button>
       </div>
+      <p id="signup-privacy" class="mt-3 text-sm leading-relaxed text-ink/80">Sign up for email updates. Unsubscribe anytime.</p>
       <p id="signup-message" role="alert" class="mt-2 text-center text-sm leading-relaxed">{{ message }}</p>
-      <p v-if="!mounted" class="mt-3 text-center text-sm">Please enable JavaScript to sign up for email updates.</p>
+      <noscript class="mt-3 block text-center text-sm">Please enable JavaScript to sign up for email updates.</noscript>
     </form>
   </section>
-  <span v-else class="mt-8 rounded-full border border-tomato px-6 py-2.5 text-xs font-bold tracking-[0.16em] sm:mt-10">COMING SOON</span>
+  <span v-else class="mt-8 rounded-full border border-forest px-6 py-2.5 text-sm font-bold tracking-[0.16em] sm:mt-10">COMING SOON</span>
 </template>
 
 <style scoped>

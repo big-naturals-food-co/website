@@ -95,10 +95,22 @@ function request(uri: string, host = 'example.com', querystring = {}) {
 }
 
 test('root and Nuxt assets pass through unchanged', () => {
-  for (const uri of ['/', '/favicon.svg', '/_payload.json', '/_nuxt/entry.abc.css', '/_nuxt/builds/latest.json']) {
+  for (const uri of ['/', '/favicon.png', '/favicon.ico', '/_payload.json', '/goose-nibbles/_payload.json', '/_nuxt/entry.abc.css', '/_nuxt/builds/latest.json']) {
     const original = request(uri)
     assert.equal(handler({ request: original }), original)
   }
+})
+
+test('Goose Nibbles serves its static HTML and canonicalizes aliases without losing queries', () => {
+  const original = request('/goose-nibbles')
+  assert.equal(handler({ request: original }).uri, '/goose-nibbles/index.html')
+  const query = { flavor: { value: 'cranberry%20caboodle' } }
+  for (const uri of ['/goose-nibbles/', '/goose-nibbles/index.html']) {
+    assert.equal(handler({ request: request(uri, 'example.com', query) }).headers.location.value,
+      'https://example.com/goose-nibbles?flavor=cranberry%20caboodle')
+  }
+  assert.equal(handler({ request: request('/goose-nibbles', 'www.example.com') }).headers.location.value,
+    'https://example.com/goose-nibbles')
 })
 
 test('all other page URLs redirect to root, including file-like and encoded paths', () => {

@@ -1,0 +1,12 @@
+{
+  "weight_per_teaspoon_grams": {
+    "maple-syrup": {"grams": 6.6, "basis": "Approximation from a typical maple syrup conversion."},
+    "vanilla-bean-paste": {"grams": 5, "basis": "Rough guess; paste density varies by product."},
+    "cocoa-butter": {"grams": "14/3", "basis": "Provisional 14 g per US tablespoon melted cocoa butter for ingredient ordering only; not a measured conversion. The supplied label gives approximately 6 wafers per 14 g, not a tablespoon equivalence."},
+    "cinnamon": {"grams": 2.6, "basis": "Rough guess for ground cinnamon; packing varies."},
+    "vanilla-powder": {"grams": 2, "basis": "Rough guess; powder composition and packing vary."}
+  },
+  "ingredient_names": {
+    "mulling-spices": "Apple pie spice"
+  }
+}

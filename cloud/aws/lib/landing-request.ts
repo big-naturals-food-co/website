@@ -6,8 +6,9 @@ export function landingRequestCode(domainName: string): string {
   var uri = request.uri;
   var host = request.headers.host ? request.headers.host.value.toLowerCase() : '';
   var canonical = ${JSON.stringify(domainName)};
-  var asset = uri.indexOf('/_nuxt/') === 0 || uri === '/favicon.svg' || uri === '/_payload.json';
-  var destination = uri === '/' || asset ? uri : '/';
+  var asset = uri.indexOf('/_nuxt/') === 0 || uri === '/favicon.png' || uri === '/favicon.ico' || uri === '/_payload.json' || uri === '/goose-nibbles/_payload.json';
+  var gooseNibbles = uri === '/goose-nibbles' || uri === '/goose-nibbles/' || uri === '/goose-nibbles/index.html';
+  var destination = gooseNibbles ? '/goose-nibbles' : uri === '/' || asset ? uri : '/';
   if (host !== canonical || destination !== uri) {
     var pairs = [];
     var query = request.querystring || {};
@@ -24,6 +25,7 @@ export function landingRequestCode(domainName: string): string {
       }
     };
   }
+  if (uri === '/goose-nibbles') request.uri = '/goose-nibbles/index.html';
   return request;
 }`
 }
