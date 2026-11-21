@@ -4,13 +4,14 @@ import mascot from '~/assets/brand/bnfc_mascot.jpg'
 import barPlaceholder from '~/assets/brand/granola-bar-placeholder.svg'
 
 const backgrounds = ['coral', 'sky', 'leaf']
-const flavorSubtitles: Record<string, string> = {
-  'Violet’s Demise': 'Blueberry Flavor',
-  'Eve Did It': 'Apple Flavor',
+const flavorDetails: Record<string, { subtitle?: string, photoCaption: string }> = {
+  'Cranberry Caboodle': { photoCaption: 'Placeholder Bar!' },
+  'Violet’s Demise': { subtitle: 'Blueberry Flavor', photoCaption: 'Temporary fake-bar.' },
+  'Eve Did It': { subtitle: 'Apple Flavor', photoCaption: 'Don\'t have this one either...' },
 }
 const flavors = manifest.flavors.map((flavor, index) => ({
   ...flavor,
-  subtitle: flavorSubtitles[flavor.name],
+  ...flavorDetails[flavor.name],
   id: flavor.name.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-'),
   background: backgrounds[index % backgrounds.length],
 }))
@@ -27,7 +28,7 @@ useHead({ link: [{ rel: 'canonical', href: 'https://bignaturalsfoodco.com/goose-
 <template>
   <main id="main" class="nibbles-main">
     <header class="nibbles-intro">
-      <p class="nibbles-eyebrow">Meet our granola bars</p>
+      <p class="nibbles-eyebrow">HRAAAONK!</p>
       <h1 class="nibbles-title">Goose Nibbles</h1>
       <nav class="flavor-links" aria-label="Jump to a flavor">
         <a v-for="flavor in flavors" :key="flavor.id" :href="`#${flavor.id}`">{{ flavor.name }}</a>
@@ -46,7 +47,7 @@ useHead({ link: [{ rel: 'canonical', href: 'https://bignaturalsfoodco.com/goose-
         <p class="flavor-ingredients"><strong>Ingredients:</strong> {{ flavor.ingredients.join(', ') }}.</p>
         <figure class="flavor-photo">
           <img :src="barPlaceholder" alt="Illustrated placeholder for a single granola bar." width="480" height="280" loading="lazy">
-          <figcaption>Bar photo coming soon.</figcaption>
+          <figcaption>{{ flavor.photoCaption ?? `Photo of ${flavor.name} coming soon.` }}</figcaption>
         </figure>
       </div>
     </section>
