@@ -3,13 +3,17 @@
 Configured and enabled in source. The Cloudflare public site key
 is saved, and the new business Brevo list ID is `4`. Both repository secret names
 were verified on November 4, 2026; their values have not been read or validated.
-The first access update completed, but deployment exposed missing permissions.
-A broader policy correction is now verified locally and awaits the user's IAM
-update. The signup stack is `ROLLBACK_COMPLETE` with a retained log group; it
-must be recovered before another deployment. The GitHub workflow copies the keys into AWS on
+The later [GitHub run 41939388598](https://github.com/big-naturals-food-co/website/actions/runs/41939388598)
+successfully deployed the signup stack on November 4, 2026 (America/Chicago).
+The recovery section below records the earlier failed creation; it is not a
+current instruction to delete or recreate anything. On November 21, live
+permissions passed 115/115 checks; signup was `CREATE_COMPLETE`, with no
+unmanaged log-group collision and the API Gateway service role present.
+A real signup and Brevo membership still need verification for the upcoming release.
+The GitHub workflow copies the keys into AWS on
 pushes to `main`; deployment status is available in
 [Actions](https://github.com/big-naturals-food-co/website/actions/workflows/deploy.yml).
-`signup.json` is the shared,
+`cloud/signup.json` is the shared,
 public configuration for Nuxt and CDK. Setting `enabled: false` hides the form
 and makes the API reject intake without contacting providers.
 
@@ -32,7 +36,9 @@ canonical hostname and action `subscribe`. API Gateway accepts only
 5. Throttling is best effort and shared across visitors.
 
 Brevo stores contacts in one configured list. This is a single-opt-in form;
-the checkbox requests email updates, not a transactional confirmation email.
+the form discloses email updates and unsubscribe information beside the submit
+button and sends `consent: true` on submission. It has no separate checkbox and
+does not request a transactional confirmation email.
 Existing list members receive the same generic success response. Global
 blocklists and list unsubscribes are preserved; unsupported consent-group
 configuration fails closed. No email is sent by this code. Any welcome email
@@ -40,7 +46,7 @@ requires a separate Brevo automation. Use unsubscribe links in future campaigns.
 
 The frontend shows success only after the provider operation completes (or an
 existing contact needs no change). Provider errors/timeouts return 503 and keep
-the visitor's email/consent available for retry with a new token. There is no
+the visitor's email available for retry with a new token. There is no
 queue or automatic retry. A timeout after a Brevo write can leave the contact
 saved; retrying checks membership first. Requests and contact details are never
 logged. CloudWatch receives fixed outcome labels and retains logs for 30 days.
@@ -54,21 +60,22 @@ when AWS hosting moves.
 
 1. In Cloudflare, create a Managed Turnstile widget named `Big Naturals Food Co.`
    allowing `bignaturalsfoodco.com`. Leave pre-clearance off. Store the public
-   site key in `signup.json`; keep the secret private.
+   site key in `cloud/signup.json`; keep the secret private.
 2. In Brevo, create `Big Naturals — Launch Updates` under Contacts → Lists.
-   Store its numeric ID as `brevoListId` in `signup.json`. Under Settings →
+   Store its numeric ID as `brevoListId` in `cloud/signup.json`. Under Settings →
    SMTP & API → API Keys & MCP, create a website key with contact read/write
    access. Save the key privately. If API IP authorization is enabled, resolve
    it before rollout: this Lambda has dynamic outbound IPs, not a fixed address.
 3. Open [repository Actions secrets](https://github.com/big-naturals-food-co/website/settings/secrets/actions)
    and add `BREVO_API_KEY` and `TURNSTILE_SECRET`. Use repository secrets, not
    variables or environment secrets. No operator login or local key entry is
-   required. The public widget key and list ID remain in `signup.json`.
+   required. The public widget key and list ID remain in `cloud/signup.json`.
 4. Apply the access update in [ACCESS.md](ACCESS.md) when setting up an account.
    It creates the dedicated runtime role and grants the main-only GitHub role
    write access to exactly the two signup parameters. This update was applied
-   on November 4, 2026, but the subsequent correction described in ACCESS.md is
-   still pending. The existing `AWSServiceRoleForAPIGateway` prerequisite was
+   on November 4, 2026; the subsequent GitHub deployment succeeded. Recheck
+   current permissions using ACCESS.md before applying further changes.
+   The existing `AWSServiceRoleForAPIGateway` prerequisite was
    verified in the current account. In a new account, an administrator must
    create it if absent. [AWS service-linked role documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/using-service-linked-roles.html)
 5. Set `enabled: true`, run the checks below, and deploy through the normal
@@ -161,6 +168,10 @@ site verification checks the static page/assets, not provider credentials.
 
 ## Failed initial deployment recovery
 
+Historical recovery guidance only: the later successful run cited above
+supersedes this failure state. Run the read-only preflight first; use recovery
+only if it identifies an actual current blocker.
+
 The November 4 failed signup creation rolled back to `ROLLBACK_COMPLETE` with
 termination protection enabled. Its log group
 `/aws/lambda/big-naturals-food-co-signup` was `DELETE_SKIPPED`. The site stack
@@ -188,21 +199,21 @@ aws logs describe-log-streams --profile default --region us-east-1 \
 
 Preserve any log group containing data. CloudFormation supports importing a named
 retained log group; [AWS's auto-import requirements](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/import-resources-automatically.html)
-describe that recovery option. Recovery has not been executed, and this change
-does not silently delete or import resources. GitHub integration and production
-signup verification remain pending after local permission verification.
+describe that recovery option. The historical recovery method was not verified
+during the November 21 review. The later GitHub deployment succeeded; a real
+provider signup remains a separate verification step.
 
 ## Moving to the new AWS account
 
 The current target remains `066540957026` until the planned migration. Account
 age and domain-transfer eligibility must be verified at that time. The workflow
-now derives account, region and site stack from `aws/project.json`.
+now derives account, region and site stack from `cloud/aws/project.json`.
 
 1. Prepare the new account's hosted zone, GitHub OIDC provider, and API Gateway
    service-linked role. Recreate the
    project access stack and authenticate a new operator. The access stack
    imports an existing GitHub OIDC provider, so create that prerequisite first.
-2. Update `aws/project.json` with the new account and hosted-zone ID. The workflow copies
+2. Update `cloud/aws/project.json` with the new account and hosted-zone ID. The workflow copies
    this business's existing repository secrets into the new account's SSM parameters. Brevo
    contacts and the Turnstile widget remain in their dedicated provider accounts.
 3. Plan and review the DNS/certificate/CDN cutover before deploying. CloudFront

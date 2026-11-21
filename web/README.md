@@ -85,7 +85,7 @@ Home uses an h1 and Goose Nibbles uses an h2 for the panel heading.
 Email signup behavior lives in `app/components/SignupForm.vue`. Its public settings come
 from `../cloud/signup.json`; provider secrets stay in AWS and never enter the
 Nuxt build. The form stays hidden while `enabled` is false. See
-[provider setup and activation](../cloud/SIGNUP.md).
+[provider setup and activation](../docs/SIGNUP.md).
 
 ## Validate and generate
 
@@ -98,8 +98,14 @@ npm run test:e2e
 The publishable output is `.output/public/`. HTML is prerendered at build time.
 Browser tests use installed Google Chrome locally (Playwright Chromium in CI),
 start/stop a local server on port 4173, and mock Turnstile and the signup API.
+Generate first: `tests/generated.spec.ts` also opens the production files with
+locally emulated CloudFront routing, checks hydration and production signup
+configuration, and mocks all external requests. Vite emits root-relative asset
+URLs so server HTML and client image attributes match during hydration.
 The test server uses `.nuxt/e2e` so a separate development preview can stay open.
-They use test-only runtime overrides, never production credentials or contacts.
+Development-server tests use test-only runtime overrides; generated-page tests
+retain production public settings but intercept provider requests. Neither uses
+production secrets or creates real contacts.
 Neither `200.html` nor `404.html` is emitted. The CloudFront function serves
 `/goose-nibbles` from `goose-nibbles/index.html`, canonicalizes its trailing slash
 and explicit index URLs, and redirects unknown page URLs to `/`. Local preview
@@ -118,6 +124,16 @@ Open <http://127.0.0.1:4173>. Regenerate after changing source files and refresh
 the browser. Stop the server with **Ctrl+C**.
 
 ## Verification notes
+
+Step 4 passed on November 21, 2026: 33 browser checks passed, with one
+desktop-only geometry check skipped on mobile. Production pages were also
+checked at 320, 390, 768, and 1440 pixels, with no overflow or hydration warnings;
+desktop/mobile screenshots were inspected. Generated ingredients remain readable
+without JavaScript. The updater reproduced the checked-in manifest exactly from
+business-os revision 49 using the recorded estimates. Infrastructure checks,
+synthesis, and the 24-file publication dry run passed. Live AWS preflight passed;
+the new release still needs PR integration checks and deployment. Follow the
+[deployment workflow](../docs/workflows/deploy-temporary-site.md).
 
 The Goose Nibbles page passed typechecking, static generation, and desktop/mobile
 browser checks on November 21, 2026. Checks cover the manifest text, images,

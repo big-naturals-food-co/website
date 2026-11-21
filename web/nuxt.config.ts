@@ -30,6 +30,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+    experimental: {
+      renderBuiltUrl: filename => `/${filename}`,
+    },
   },
   app: {
     head: {

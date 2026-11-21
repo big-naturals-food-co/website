@@ -67,7 +67,7 @@ agent action boundaries below: the user applies IAM updates and runs deployments
 These rules apply across sessions. Deployment instructions below and in linked
 documents describe procedures for the user; they do not authorize agent execution.
 
-A single static landing page built with Nuxt, TypeScript, and Tailwind CSS.
+A static home page and Goose Nibbles page built with Nuxt, TypeScript, and Tailwind CSS.
 Live at [bignaturalsfoodco.com](https://bignaturalsfoodco.com).
 
 Web setup, local preview, build commands, and verification notes are in
@@ -75,27 +75,29 @@ Web setup, local preview, build commands, and verification notes are in
 
 ## Initial sprint
 
-1. **Landing page (implemented):** Nuxt and Tailwind, responsive coming-soon content, metadata,
-   and favicon. Provisional cream/red branding; final copy and branding can be
-   supplied later.
+1. **Pages (implemented locally):** Nuxt and Tailwind, the new brand assets,
+   responsive home/signup content, and Goose Nibbles flavor sections backed by
+   the generated ingredient manifest. The updated site awaits deployment.
 2. **Site infrastructure (deployed and verified locally):** TypeScript CDK in `cloud/aws/`, private S3, CloudFront
    with Origin Access Control, Route 53, and a DNS-validated ACM certificate.
    Redirect unknown page URLs to `/` while serving assets normally; no dedicated
    404 page. Versioned/retained storage. The account and existing hosted zone
    for `bignaturalsfoodco.com` are verified. Dedicated IAM access was created
-   through the [one-time CLI setup](cloud/ACCESS.md); GitHub can use its OIDC role
+   through the [one-time CLI setup](docs/ACCESS.md); GitHub can use its OIDC role
    independently of the human operator's login.
-   See [`cloud/README.md`](cloud/README.md) for configuration and validation.
+   See [`docs/README.md`](docs/README.md) for configuration and validation.
 3. **GitHub deployments (implemented; local rollout verified):** on pushes to `main`, validate and generate the site,
    deploy CDK, upload assets, and invalidate CloudFront. Authenticate through
    OIDC restricted to this repository's `main` branch. Serialize deployments
-   and verify the published build. See [deployment and rollback](cloud/DEPLOYMENT.md).
+   and verify the published build. See [deployment and rollback](docs/DEPLOYMENT.md).
 
 One production environment. No beta branch or release-triggered deployments.
 The first successful production rollout was deployed locally on November 4,
 2026 using the operator with the same managed deployment policy as GitHub.
 Infrastructure creation, file publication, cache invalidation, and HTTPS checks
-passed; GitHub has not been rerun since that local verification. URL redirects are a CloudFront responsibility in step 2;
+passed. The later [GitHub run 41939388598](https://github.com/big-naturals-food-co/website/actions/runs/41939388598)
+also passed build, deployment, and HTTPS verification for commit `1fb7b49`.
+URL redirects are a CloudFront responsibility in step 2;
 the static build alone does not implement those redirects.
 
 ## Email signup
@@ -103,13 +105,17 @@ the static build alone does not implement those redirects.
 Email signup is implemented locally with an accessible form, explicit consent,
 Turnstile verification and a dedicated AWS API/Lambda writing to Brevo.
 The new business provider settings and repository secrets are configured.
-The broader AWS permission fix passes 115 local AWS IAM simulation checks;
-the user still needs to apply the IAM update and recover the failed signup stack
-and retained log group before GitHub integration. Run the
-[local permission checks](cloud/ACCESS.md#check-the-fix-locally-before-applying-it)
+The later GitHub run cited above successfully deployed the signup infrastructure.
+On November 21, live and proposed IAM policies each passed 115 checks, and the
+signup stack was healthy with no retained-log-group collision. The historical
+rollback instructions are not a current recovery requirement. Run the
+[local permission checks](docs/ACCESS.md#check-the-fix-locally-before-applying-it)
 before another deployment. Publication runs through GitHub on pushes
 to `main`; check the [Site workflow](https://github.com/big-naturals-food-co/website/actions/workflows/deploy.yml) for deployment status.
-See [signup setup and deployment](cloud/SIGNUP.md).
+See [signup setup and deployment](docs/SIGNUP.md).
+
+The next release follows the [temporary-site deployment workflow](docs/workflows/deploy-temporary-site.md),
+including local verification, live preflight, PR checks, release, and smoke tests.
 
 The implementation uses this business's own widget, list, secrets and AWS
 resources. The existing AWS account remains the temporary hosting target;

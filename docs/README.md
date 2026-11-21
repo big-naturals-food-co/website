@@ -1,6 +1,6 @@
 # Big Naturals Food Co. infrastructure
 
-The TypeScript CDK application in `aws/` defines one production static site.
+The TypeScript CDK application in `cloud/aws/` defines one production static site.
 The site is live at [bignaturalsfoodco.com](https://bignaturalsfoodco.com).
 The full production deployment was completed and verified locally on November 4,
 2026 using the operator with the same managed deployment policy as GitHub.
@@ -9,9 +9,11 @@ There is no beta environment. A separate email signup backend is implemented
 with dedicated provider settings and deploys through the main workflow;
 see [SIGNUP.md](SIGNUP.md).
 
+For the next release, follow [the temporary-site deployment workflow](workflows/deploy-temporary-site.md).
+
 ## Configuration
 
-Non-secret production settings live in [`aws/project.json`](aws/project.json).
+Non-secret production settings live in [`cloud/aws/project.json`](../cloud/aws/project.json).
 
 | Setting | Value |
 | --- | --- |
@@ -50,10 +52,10 @@ npm run synth
 
 These commands do not deploy, upload files, invalidate caches, or change DNS.
 They need no AWS credentials. The generated production template is
-`aws/cdk.out/BigNaturalsFoodCoSite.template.json`; generated assemblies are
+`cloud/aws/cdk.out/BigNaturalsFoodCoSite.template.json`; generated assemblies are
 ignored by Git. `npm run synth:example` validates the same infrastructure with
 the example account/domain in `project.example.json` and writes to
-`aws/cdk.out/example/`.
+`cloud/aws/cdk.out/example/`.
 
 ## Resources and request behavior
 
@@ -76,16 +78,18 @@ The viewer-request function applies these rules before an S3 request:
 | Request | Result |
 | --- | --- |
 | Canonical `/` | Serve the landing page |
-| `/_nuxt/*`, `/favicon.svg`, `/_payload.json` | Serve the asset normally |
+| Canonical `/goose-nibbles` | Serve `goose-nibbles/index.html` |
+| `/goose-nibbles/`, `/goose-nibbles/index.html` | 302 redirect to `/goose-nibbles` |
+| `/_nuxt/*`, `/favicon.png`, `/favicon.ico`, `/_payload.json`, `/goose-nibbles/_payload.json` | Serve the asset normally |
 | Any other path, including `/index.html` and `/404.html` | 302 redirect to `/` |
-| `www` or the distribution hostname | Redirect to the canonical host, preserving recognized asset paths |
+| `www` or the distribution hostname | Redirect to the canonical host, preserving recognized pages and asset paths |
 
 Redirects preserve query parameters, including repeated parameters, and are
 cached for five minutes. The redirects are temporary so future pages can be
 introduced without persistent browser redirects. There is no custom 404 page
 or HTML error fallback. Missing files within the reserved `/_nuxt/` asset
 namespace remain asset errors rather than receiving HTML in place of JS/CSS.
-Extend the asset allowlist in `lib/landing-request.ts` when adding public files.
+Extend the asset allowlist in `cloud/aws/lib/landing-request.ts` when adding public files.
 
 ## Access and deployment
 
@@ -135,7 +139,11 @@ operator's shared deployment policy: the site stack is `CREATE_COMPLETE`, all
 verification matched the generated homepage and referenced assets byte for byte,
 and checked canonical/root redirects. Existing MX/TXT records were unchanged.
 The temporary operator access key used for this run was deleted afterward.
-GitHub has not been rerun since that successful local deployment.
+The later [GitHub run 41939388598](https://github.com/big-naturals-food-co/website/actions/runs/41939388598)
+passed build and production deployment on November 4, 2026 (America/Chicago),
+including signup infrastructure, publication, and HTTPS verification. This is
+evidence for commit `1fb7b49`, not the new temporary site. See the
+[next-release checks](workflows/deploy-temporary-site.md) for current verification limits.
 
 `npm audit` reports two moderate affected packages (`aws-cdk-lib` and its
 transitive `minimatch` dependency) for one glob-processing denial-of-service
