@@ -50,7 +50,7 @@ export class SiteStack extends Stack {
     const routes = new cloudfront.Function(this, 'LandingRoutes', {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromInline(landingRequestCode(project.domainName)),
-      comment: 'Redirect non-asset paths and alternate hosts to the landing page.',
+      comment: 'Serve known site pages and assets; canonicalize hosts and page URLs.',
     })
     const headers = new cloudfront.ResponseHeadersPolicy(this, 'Headers', {
       securityHeadersBehavior: {
@@ -74,7 +74,7 @@ export class SiteStack extends Stack {
       headerBehavior: cloudfront.CacheHeaderBehavior.none(),
     })
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
-      comment: 'Big Naturals Food Co. production landing page',
+      comment: 'Big Naturals Food Co. production site',
       domainNames: domains,
       certificate,
       defaultRootObject: 'index.html',

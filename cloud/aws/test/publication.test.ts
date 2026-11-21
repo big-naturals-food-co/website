@@ -16,9 +16,12 @@ function fixture(t: TestContext) {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'big-naturals-publication-'))
   t.after(() => rmSync(directory, { recursive: true, force: true }))
   mkdirSync(path.join(directory, '_nuxt/builds/meta'), { recursive: true })
+  mkdirSync(path.join(directory, 'goose-nibbles'))
   const files = {
     'index.html': '<html><head><link href="/_nuxt/entry.hash.css" rel="stylesheet"></head><body>Big Naturals<script src="/_nuxt/chunk.hash.js"></script></body></html>',
-    'favicon.svg': '<svg></svg>', '_payload.json': '{}',
+    'goose-nibbles/index.html': '<html><body>Goose Nibbles<img src="/_nuxt/mascot.hash.jpg"></body></html>',
+    'goose-nibbles/_payload.json': '{}', '_nuxt/mascot.hash.jpg': 'mascot',
+    'favicon.png': 'png-icon', 'favicon.ico': 'ico-icon', '_payload.json': '{}',
     '_nuxt/entry.hash.css': 'body{color:red}', '_nuxt/chunk.hash.js': 'console.log("ok")',
     '_nuxt/builds/latest.json': '{"id":"new-build"}', '_nuxt/builds/meta/new-build.json': '{}',
   }
@@ -32,12 +35,23 @@ test('publication uploads assets before HTML and publishes the mutable build mar
   const index = plan.findIndex(file => file.key === 'index.html')
   assert.ok(plan.findIndex(file => file.key === '_nuxt/chunk.hash.js') < index)
   assert.ok(plan.findIndex(file => file.key === '_payload.json') < index)
+  const gooseIndex = plan.findIndex(file => file.key === 'goose-nibbles/index.html')
+  assert.ok(plan.findIndex(file => file.key === 'goose-nibbles/_payload.json') < gooseIndex)
+  assert.ok(plan.findIndex(file => file.key === '_nuxt/mascot.hash.jpg') < gooseIndex)
   assert.equal(plan.at(-1)!.key, '_nuxt/builds/latest.json')
   assert.ok(plan.find(file => file.key === '_nuxt/chunk.hash.js')!.cacheControl.includes('immutable'))
   for (const file of plan.filter(file => file.key.includes('/builds/') || file.key === 'index.html')) {
     assert.ok(!file.cacheControl.includes('immutable'))
     assert.ok(file.cacheControl.includes('max-age=300'))
   }
+})
+
+test('publication requires the Goose Nibbles page', (t) => {
+  const { directory } = fixture(t)
+  writeFileSync(path.join(directory, 'goose-nibbles/index.html'), '')
+  assert.throws(() => publicationPlan(directory), /non-empty goose-nibbles/)
+  rmSync(path.join(directory, 'goose-nibbles/index.html'))
+  assert.throws(() => publicationPlan(directory), /non-empty goose-nibbles/)
 })
 
 test('publication rejects empty output, stray files, and symlinks before upload', (t) => {
@@ -96,15 +110,20 @@ test('an asset upload failure stops before HTML publication or invalidation', (t
 
 test('public verification detects stale HTML, broken assets, and incorrect redirects', async (t) => {
   const { directory, files } = fixture(t)
-  let failure: 'html' | 'asset' | 'redirect' | undefined
+  let failure: 'html' | 'goose-html' | 'goose-asset' | 'asset' | 'redirect' | undefined
   const request: typeof fetch = async input => {
     const url = new URL(String(input))
+    if (url.pathname === '/goose-nibbles/' || url.pathname === '/goose-nibbles/index.html' || (url.hostname === 'www.example.com' && url.pathname === '/goose-nibbles')) {
+      return new Response(null, { status: 302, headers: { location: failure === 'redirect' ? 'https://example.com/' : 'https://example.com/goose-nibbles' } })
+    }
     if (url.hostname === 'www.example.com' || url.pathname === '/__deployment-check') {
       return new Response(null, { status: 302, headers: { location: failure === 'redirect' ? 'https://outside.example/' : 'https://example.com/' } })
     }
-    const key = url.pathname === '/' ? 'index.html' : url.pathname.slice(1)
+    const key = url.pathname === '/' ? 'index.html' : url.pathname === '/goose-nibbles' ? 'goose-nibbles/index.html' : url.pathname.slice(1)
     const body = files[key as keyof typeof files]
     if (failure === 'html' && key === 'index.html') return new Response('old build')
+    if (failure === 'goose-html' && key === 'goose-nibbles/index.html') return new Response('old Goose Nibbles')
+    if (failure === 'goose-asset' && key === '_nuxt/mascot.hash.jpg') return new Response('missing', { status: 404 })
     if (failure === 'asset' && key.endsWith('.js')) return new Response('missing', { status: 404 })
     return new Response(body, { status: body ? 200 : 404 })
   }
@@ -112,6 +131,10 @@ test('public verification detects stale HTML, broken assets, and incorrect redir
   failure = 'html'
   await assert.rejects(verifySite(directory, project, request), /homepage/)
   failure = 'asset'
+  await assert.rejects(verifySite(directory, project, request), /asset/)
+  failure = 'goose-html'
+  await assert.rejects(verifySite(directory, project, request), /goose-nibbles/)
+  failure = 'goose-asset'
   await assert.rejects(verifySite(directory, project, request), /asset/)
   failure = 'redirect'
   await assert.rejects(verifySite(directory, project, request), /redirect/)

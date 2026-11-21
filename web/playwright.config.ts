@@ -15,6 +15,8 @@ export default defineConfig({
     timeout: 60000,
     reuseExistingServer: false,
     env: {
+      BNFC_E2E: 'true',
+      NUXT_IGNORE_LOCK: '1',
       NUXT_PUBLIC_SIGNUP_ENABLED: 'true',
       NUXT_PUBLIC_SIGNUP_ENDPOINT: 'https://signup.example.test/subscribe',
       NUXT_PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA',

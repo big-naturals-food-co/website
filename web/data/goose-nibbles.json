@@ -1,0 +1,65 @@
+{
+  "flavors": [
+    {
+      "name": "Cranberry Caboodle",
+      "ingredients": [
+        "Almond butter",
+        "Maple syrup",
+        "Rolled oats",
+        "Dried cranberries",
+        "Walnuts",
+        "Chia seeds",
+        "Hemp hearts",
+        "Pumpkin seeds",
+        "Sunflower seeds",
+        "Ground flaxseed",
+        "Vanilla bean paste",
+        "Iodized salt"
+      ]
+    },
+    {
+      "name": "Violet’s Demise",
+      "ingredients": [
+        "Agave nectar",
+        "Almond butter",
+        "Rolled oats",
+        "Walnuts",
+        "White chocolate",
+        "Dried blueberries",
+        "Dried strawberries",
+        "Chia seeds",
+        "Hemp hearts",
+        "Ground flaxseed",
+        "Cocoa butter",
+        "Yogurt powder",
+        "Blueberry powder",
+        "Vanilla bean paste",
+        "Iodized salt",
+        "Vanilla powder"
+      ]
+    },
+    {
+      "name": "Eve Did It",
+      "ingredients": [
+        "Almond butter",
+        "Maple syrup",
+        "Rolled oats",
+        "Pecans",
+        "White chocolate",
+        "Walnuts",
+        "Dried apples",
+        "Chia seeds",
+        "Hemp hearts",
+        "Pumpkin seeds",
+        "Ground flaxseed",
+        "Cocoa butter",
+        "Yogurt powder",
+        "Vanilla bean paste",
+        "Apple pie spice",
+        "Iodized salt",
+        "Cinnamon",
+        "Vanilla powder"
+      ]
+    }
+  ]
+}

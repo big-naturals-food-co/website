@@ -13,9 +13,14 @@ export interface PublicationFile {
 const contentTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.json': 'application/json',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
   '.webp': 'image/webp', '.woff': 'font/woff', '.woff2': 'font/woff2',
 }
+
+const pages = [
+  { route: '/', key: 'index.html' },
+  { route: '/goose-nibbles', key: 'goose-nibbles/index.html' },
+]
 
 export function publicationPlan(directory: string): PublicationFile[] {
   const files: PublicationFile[] = []
@@ -27,8 +32,8 @@ export function publicationPlan(directory: string): PublicationFile[] {
       const key = path.posix.join(relative, entry.name)
       if (entry.isDirectory()) { walk(key); continue }
       if (!entry.isFile()) throw new Error(`Unexpected output entry: ${key}`)
-      if (!key.startsWith('_nuxt/') && !['index.html', '_payload.json', 'favicon.svg'].includes(key)) {
-        throw new Error(`Output path is not recognized by the landing-page routing: ${key}`)
+      if (!key.startsWith('_nuxt/') && !['index.html', '_payload.json', 'favicon.png', 'favicon.ico', 'goose-nibbles/index.html', 'goose-nibbles/_payload.json'].includes(key)) {
+        throw new Error(`Output path is not recognized by the site routing: ${key}`)
       }
       const contentType = contentTypes[path.extname(key)]
       if (!contentType) throw new Error(`Unknown content type: ${key}`)
@@ -36,14 +41,15 @@ export function publicationPlan(directory: string): PublicationFile[] {
       files.push({
         key, file: path.join(directory, key), contentType,
         cacheControl: immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=300, must-revalidate',
-        // Publish the new build marker only after its landing page is in place.
-        phase: immutable ? 0 : key === '_nuxt/builds/latest.json' ? 3 : key === 'index.html' ? 2 : 1,
+        phase: immutable ? 0 : key === '_nuxt/builds/latest.json' ? 3 : key.endsWith('.html') ? 2 : 1,
       })
     }
   }
   walk('')
-  if (!files.some(file => file.key === 'index.html') || !statSync(path.join(directory, 'index.html')).size) {
-    throw new Error('Refusing to publish without a non-empty index.html.')
+  for (const page of pages) {
+    if (!files.some(file => file.key === page.key) || !statSync(path.join(directory, page.key)).size) {
+      throw new Error(`Refusing to publish without a non-empty ${page.key}.`)
+    }
   }
   return files.sort((a, b) => a.phase - b.phase || a.key.localeCompare(b.key))
 }
@@ -83,12 +89,16 @@ export function publishFiles(plan: PublicationFile[], destination: ReturnType<ty
 
 export async function verifySite(directory: string, project: ProjectConfig, request: typeof fetch = fetch): Promise<void> {
   const origin = `https://${project.domainName}`
-  const expected = readFileSync(path.join(directory, 'index.html'), 'utf8')
-  const homepage = await request(origin, { redirect: 'manual', signal: AbortSignal.timeout(15_000) })
-  if (homepage.status !== 200 || await homepage.text() !== expected) {
-    throw new Error('The public homepage does not match this generated build.')
+  const assets = new Set(['/favicon.png', '/favicon.ico'])
+  for (const page of pages) {
+    const expected = readFileSync(path.join(directory, page.key), 'utf8')
+    const response = await request(origin + page.route, { redirect: 'manual', signal: AbortSignal.timeout(15_000) })
+    if (response.status !== 200 || await response.text() !== expected) {
+      throw new Error(`The public ${page.route === '/' ? 'homepage' : page.route} does not match this generated build.`)
+    }
+    for (const match of expected.matchAll(/(?:src|href)="(\/_nuxt\/[^"?#]+)"/g)) assets.add(match[1]!)
+    assets.add(page.route === '/' ? '/_payload.json' : `${page.route}/_payload.json`)
   }
-  const assets = new Set(['/favicon.svg', ...Array.from(expected.matchAll(/(?:src|href)="(\/_nuxt\/[^"?#]+)"/g), match => match[1]!)])
   for (const asset of assets) {
     const response = await request(origin + asset, { signal: AbortSignal.timeout(15_000) })
     const expectedBytes = readFileSync(path.join(directory, asset.slice(1)))
@@ -98,5 +108,9 @@ export async function verifySite(directory: string, project: ProjectConfig, requ
   for (const url of [`${origin}/__deployment-check`, ...project.redirectDomainNames.map(domain => `https://${domain}/`)]) {
     const response = await request(url, { redirect: 'manual', signal: AbortSignal.timeout(15_000) })
     if (response.status !== 302 || response.headers.get('location') !== `${origin}/`) throw new Error(`Unexpected root redirect: ${url}`)
+  }
+  for (const url of [`${origin}/goose-nibbles/`, `${origin}/goose-nibbles/index.html`, ...project.redirectDomainNames.map(domain => `https://${domain}/goose-nibbles`)]) {
+    const response = await request(url, { redirect: 'manual', signal: AbortSignal.timeout(15_000) })
+    if (response.status !== 302 || response.headers.get('location') !== `${origin}/goose-nibbles`) throw new Error(`Unexpected Goose Nibbles redirect: ${url}`)
   }
 }
